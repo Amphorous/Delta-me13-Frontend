@@ -4,3 +4,55 @@
 @import url('https://fonts.googleapis.com/css2?family=Afacad:wght@500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Afacad&display=swap');
 @import "tailwindcss";
+@plugin 'tailwind-scrollbar';
+
+  .afacad-bold {
+    font-family: "Afacad", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-style: normal;
+  }
+  
+  .afacad-light {
+    font-family: "Afacad", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  .afacad-semi-bold{
+    font-family: "Afacad", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
+  }
+  
+  .libre-baskerville-regular {
+    font-family: "Libre Baskerville", serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  .libre-baskerville-bold {
+    font-family: "Libre Baskerville", serif;
+    font-weight: 700;
+    font-style: normal;
+  }
+  
+  .barcode-font {
+    font-family: "Libre Barcode 39", system-ui;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  .vertical-text {
+    writing-mode: vertical-lr;
+  }
+  
+  .vertical-lmao{
+    writing-mode: vertical-rl;
+  }
+  
+  .mirrored {
+    transform: scaleX(-1);
+  }

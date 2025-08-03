@@ -3,6 +3,7 @@ import './index.css'
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router'
 import RootLayout from './components/layout/RootLayout'
 import Home from './components/Home'
+import Empty from './components/Empty'
 
 const browserRouterObject = createBrowserRouter([
   {
@@ -11,7 +12,15 @@ const browserRouterObject = createBrowserRouter([
     children: [
       {
         path: "home",
-        element: <Home />
+        element: <Home />,
+        handle: { crumb: () => 'Home' },
+        children: [
+          {
+            path: "empty",
+            element: <Empty />,
+            handle: { crumb: () => 'Empty' }
+          }
+        ]
       },
       {
         path: "",
