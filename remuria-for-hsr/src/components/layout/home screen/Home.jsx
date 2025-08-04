@@ -5,6 +5,9 @@ import { GrSearch } from "react-icons/gr";
 import { FaCircleNotch } from "react-icons/fa";
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import 'overlayscrollbars/overlayscrollbars.css';
+import UserStrip from './UserStrip';
+import { useDispatch, useSelector } from 'react-redux';
+import { addOrReplaceUser } from '../../../store/localUsersSlice';
 
 function Home() {
 
@@ -12,15 +15,9 @@ function Home() {
   const [cardState, setCardState] = useState(0);
   const [cardInfo, setCardInfo] = useState();
   const { register, handleSubmit, formState: { errors } } = useForm();
-  const [localUsers, setLocalUsers] = useState(() => {
-    try {
-      const stored = localStorage.getItem("localUsers:RE:MURIA:HSR:");
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
-  });
+
+  const localUsers = useSelector( state => state.localUsers )
+  const dispatch = useDispatch();
 
   function submitHandler(obj){
     const uid = obj.uid;
@@ -42,25 +39,7 @@ function Home() {
         }
         setCardState(1);
 
-        setLocalUsers((prevUsers) => {
-          const userExists = prevUsers.some(user => user.uid === userObjForLocalStorage.uid);
-          let updatedUsers;
-
-          if (userExists) {
-            // Replace existing user
-              updatedUsers = prevUsers.map(user =>
-              user.uid === userObjForLocalStorage.uid ? userObjForLocalStorage : user
-            );
-          } else {
-            // Add new user
-            updatedUsers = [...prevUsers, userObjForLocalStorage];
-          }
-          
-          let updated = [...updatedUsers.slice(-15)]
-          localStorage.setItem("localUsers:RE:MURIA:HSR:", JSON.stringify(updated));
-          return updated;
-
-        });
+        dispatch(addOrReplaceUser(userObjForLocalStorage))
 
         setResponseWait(false);
       })
@@ -72,9 +51,9 @@ function Home() {
   }
 
   return (
-    <div className='flex-1 bg-acmber-400 mx-5 flex justify-around items-center'>
+    <div className='flex-1 bg-acmber-400 mx-5 flex justify-around items-center bg-gdray-800'>
 
-      <div className="flex flex-col searchbar h-[73%] bg-acmber-50 my-[10%] aspect-[4/6] max-h-[90vh]">
+      <div className="flex flex-col searchbar h-[73%] bg-avmber-50  aspect-[4.2/6] max-h-[65vh] max-w-[25vw] min-h-[480px] min-w-[336px]">
         
         <form onSubmit={handleSubmit(submitHandler)}
           className=' h-[10%] mb-[2%] text-[120%] flex items-center relative justify-end' 
@@ -122,13 +101,12 @@ function Home() {
               autoHide: 'scroll', 
             },
           }}
-          className="border border-[#B2B2B2]/40 bg-gray-800/40 backdrop-blur-md rounded-xl sm:rounded-4xl h-[88%]"
+          className="border border-[#B2B2B2]/40 bg-gray-800/40 backdrop-blur-md rounded-xl sm:rounded-4xl h-[88%] p-[5%]"
         >
-          <div className="flex flex-col">
+          <div className="flex flex-col h-full ">
             {[...localUsers].reverse().map((user, index, arr) => (
-              <div key={user.uid} className='h-[12.5%] flex flex-col'>
-                 {user.uid}
-              </div>
+              <UserStrip key={user.uid} user={user} last={(arr.length - index) === 1 ? true : false} first={(index) === 0 ? true : false}/>
+              
             ))}
           </div>
         </OverlayScrollbarsComponent>

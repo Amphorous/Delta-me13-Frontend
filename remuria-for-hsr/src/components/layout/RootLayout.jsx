@@ -16,7 +16,7 @@ function RootLayout() {
       <div className="relative z-10 flex flex-col min-h-screen">
         <Header />
         
-        <div className="flex-1 overflow-y-auto flex ">
+        <div className="flex-1 overflow-y-auto flex bg-bldack">
           <Outlet />
         </div>
         
