@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { GrSearch } from "react-icons/gr";
 import { FaCircleNotch } from "react-icons/fa";
@@ -25,22 +25,49 @@ function Home() {
   const testRef = useRef(null);
   const [requiredWidth, setRequiredWidth] = useState(0);
 
-  useLayoutEffect(()=>{
-    if(testRef.current) {
-      setRequiredWidth(testRef.current.offsetWidth);
+  // useLayoutEffect(()=>{
+  //   if(testRef.current) {
+  //     let width = testRef.current.offsetWidth;
+  //     setRequiredWidth( width );
+  //   }
+  // }, [])
+
+  useEffect(() => {
+    const element = testRef.current;
+    if (!element) return;
+  
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const width = entry.contentRect.width;
+        if (width > 0 && Math.abs(requiredWidth - width) > 1) {
+          setRequiredWidth(width);
+        }
+      }
+    });
+  
+    observer.observe(element);
+  
+    // Set fallback if ResizeObserver fails or takes time
+    if (requiredWidth === 0) {
+      const fallbackWidth = element.offsetWidth || 600;
+      setRequiredWidth(fallbackWidth);
     }
-  }, [])
+  
+    return () => observer.disconnect();
+  }, []);
+  
+  
 
   function submitHandler(obj){
     const uid = obj.uid;
-    console.log("UID form output (Home.jsx) :", uid);
+    //console.log("UID form output (Home.jsx) :", uid);
 
     setResponseWait(true);
     axios.get(`http://localhost:8080/user/dashboard/noRefresh/${uid}`)
       .then((res) => {
         setCardInfo(res.data);
 
-        console.log(res.data)
+        //console.log(res.data)
 
         let userObjForLocalStorage = {
           uid: res.data.uid,
@@ -129,9 +156,10 @@ function Home() {
 
       </div>
 
-      {(focusedUser === "") ? 
-      <div className="flex items-center justify-center mx-5" ref={testRef}>
-        <div className="items-center flex flex-col ">
+      {/* {
+        (focusedUser === "") ? 
+        <div className="flex items-center justify-center mx-5" ref={testRef}>
+          <div className="items-center flex flex-col ">
             <p className="afacad-bold text-9xl text-white truncate">
               Welcome to
             </p>
@@ -139,18 +167,36 @@ function Home() {
               Re<span className='text-purple-800'>:</span>muria
             </p>
           </div>
-      </div>:
-      <>
-      {(cardState !== -1) ? 
-        <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth, maxWidth: requiredWidth }}>
-          <UserCard uid={focusedUser} cardState={cardState} />
         </div>:
-        <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth, maxWidth: requiredWidth }}>
-          ??? replace this with error usercard
+        <>
+          {(cardState !== -1) ? 
+            <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth, maxWidth: requiredWidth }}>
+              <UserCard uid={focusedUser} cardState={cardState} />
+            </div>:
+            <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth, maxWidth: requiredWidth }}>
+              ??? replace this with error usercard
+            </div>
+          }
+        </>
+      } */}
+
+      {focusedUser !== "" && requiredWidth > 0 ? (
+        <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth }}>
+          <UserCard uid={focusedUser} cardState={cardState} />
         </div>
-      }
-      </>
-      }
+        ) : (
+          <div className="flex items-center justify-center mx-5" ref={testRef}>
+            <div className="items-center flex flex-col">
+              <p className="afacad-bold text-9xl text-white truncate">
+                Welcome to
+              </p>
+              <p className="afacad-bold text-9xl text-white mt-[-1.5rem]">
+                Re<span className='text-purple-800'>:</span>muria
+              </p>
+            </div>
+          </div>
+        )}
+
 
     </div>
   )
