@@ -265,13 +265,13 @@ function UserCard({uid, showButtons}) {
                                             setCopyStatus("Copied"); 
                                             setTimeout(() => {
                                                 setCopyStatus(""); 
-                                            }, 3000);
+                                            }, 750);
                                         })
                                         .catch(err => {
                                             setCopyStatus("Failed"); 
                                             setTimeout(() => {
                                                 setCopyStatus(""); 
-                                            }, 3000);
+                                            }, 750);
                                         });
                                     }}
                                 >

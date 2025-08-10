@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 // Thunk to check auth status
 export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
@@ -30,39 +31,33 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
 
 // Thunk to logout
 export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
+    try {
+      const csrfRes = await axios.get("http://localhost:8080/csrf-token", {
+        withCredentials: true,
+      });
+      const csrfToken = csrfRes.data.token;
+
+      await axios.post(
+        "http://localhost:8080/logout",
+        {}, 
+        {
+          withCredentials: true,
+          headers: {
+            "X-XSRF-TOKEN": csrfToken,
+          },
+        }
+      );
+
+      window.location.href = "http://localhost:5173/home";
+
+      return { authenticated: false, username: "", discordData: null };
+    } catch (error) {
+      console.error("Logout failed:", error);
+      return rejectWithValue(error.message);
+    }
   }
+);
 
-  try {
-    const csrfToken = getCookie('XSRF-TOKEN');
-
-    const res = await fetch('http://localhost:8080/logout', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-XSRF-TOKEN': csrfToken,
-      },
-    });
-
-    console.log('Logout response status:', res.status);
-    if (!res.ok) throw new Error('Logout failed');
-
-    const text = await res.text();
-    console.log('Logout response body:', text);
-
-    // Redirect after successful logout
-    window.location.href = 'http://localhost:5173/home';
-
-    return { authenticated: false, username: '', discordData: null };
-  } catch (err) {
-    console.error('Logout failed:', err);
-    return rejectWithValue(err.message);
-  }
-});
 
 const authSlice = createSlice({
   name: 'auth',
