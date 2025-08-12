@@ -11,21 +11,13 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
     console.log('Full Discord user object:', data);
 
     if (data.authenticated) {
-      return {
-        authenticated: true,
-        username: data.username || '',
-        discordData: data,
-      };
+      return data;
     } else {
-      return {
-        authenticated: false,
-        username: '',
-        discordData: null,
-      };
+      return { authenticated: false };
     }
   } catch (error) {
     console.error('Error checking auth:', error);
-    return { authenticated: false, username: '', discordData: null };
+    return { authenticated: false };
   }
 });
 
@@ -50,7 +42,7 @@ export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValu
 
       window.location.href = "http://localhost:5173/home";
 
-      return { authenticated: false, username: "", discordData: null };
+      return { authenticated: false };
     } catch (error) {
       console.error("Logout failed:", error);
       return rejectWithValue(error.message);
@@ -61,7 +53,7 @@ export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValu
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: { authenticated: false, username: '', discordData: null },
+  initialState: { authenticated: false },
   reducers: {},
   extraReducers: (builder) => {
     builder

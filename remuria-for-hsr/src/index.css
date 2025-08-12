@@ -50,7 +50,8 @@
   }
   
   .vertical-lmao{
-    writing-mode: vertical-rl;
+    writing-mode: vertical-lr;
+    rotate: 180deg;
   }
   
   .mirrored {

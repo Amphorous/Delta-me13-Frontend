@@ -40,11 +40,11 @@ function SignInHandle() {
       {authStatus?.authenticated ? (
         <div 
 
-          className='flex items-center justify-center p-2.5 mx-2 rounded-full border-[1px]
+          className='flex items-center justify-center p-1.5 pr-2 mx-2 rounded-full border-[1px]
           border-purple-400 cursor-pointer hover:border-purple-500 transition relative'
           >
-          <LuUserRound size={24}/>
-          <p className="text-white afacad-light ml-1.5">{authStatus?.discordData.user.global_name || authStatus?.username}</p>
+          <img src={authStatus?.avatarUrl} alt="" className="rounded-full h-[35px]" />
+          <p className="text-white afacad-light ml-1.5">{authStatus?.username}</p>
           
         </div>
       ) : (

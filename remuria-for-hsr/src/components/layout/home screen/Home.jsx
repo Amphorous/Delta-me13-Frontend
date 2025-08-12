@@ -70,12 +70,13 @@ function Home() {
           region: res.data.region,
           headIcon: res.data.headIcon,
           level: res.data.level,
-          achievementCount: res.data.achievementCount
+          achievementCount: res.data.achievementCount,
+          buildsPublic: res.data.buildsPublic
         }
         setCardState(1);
 
         dispatch(addOrReplaceUser(userObjForLocalStorage))
-        dispatch(setFocus(uid))
+        dispatch(setFocus(userObjForLocalStorage))
 
         setResponseWait(false);
       })
@@ -180,10 +181,10 @@ function Home() {
         </>
       } */}
 
-      {focusedUser !== "" && localUsers.some(u => u.uid === focusedUser) && requiredWidth > 0 > 0 ? (
+      {focusedUser?.uid !== "" && localUsers.some(u => u.uid === focusedUser?.uid) && requiredWidth > 0 > 0 ? (
         <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth }}>
 
-          <UserCard uid={focusedUser} showButtons={true}/>
+          <UserCard uid={focusedUser?.uid} showButtons={true}/>
 
         </div>
         ) : 

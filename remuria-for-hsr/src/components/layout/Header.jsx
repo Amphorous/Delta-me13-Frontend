@@ -5,11 +5,15 @@ import Unhidden from './hover bar components/Unhidden';
 import SignInHandle from './hover bar components/SignInHandle';
 import BreadCrumb from './breadcrumbs/BreadCrumb';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 function Header() {
   const [hovered, setHovered] = useState(false);
   const testRef = useRef(null);
   const [testWidth, setTestWidth] = useState(0);
+
+  const focusedUserDetailsTestInHEader = useSelector( state => state.focusedUser );
+  useEffect(()=>{console.log("Header reads the focusedUser as: ",focusedUserDetailsTestInHEader)}, [focusedUserDetailsTestInHEader])
 
   useLayoutEffect(() => {
     if (testRef.current) {
