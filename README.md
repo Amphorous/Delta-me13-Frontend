@@ -60,4 +60,4 @@ A visually rich and data-driven full-stack web application built for **Honkai: S
 - Relic database browser  
 - Build rankings 
 
-
+<img src="./assets/WIPTEXT.gif" width="100%" alt="Its a work in progress..."/>
