@@ -18,16 +18,16 @@ A visually rich and data-driven full-stack web application built for **Honkai: S
 </tr>
 <tr>
 <td align="center">
-  <img src="./assets/Split2.gif" width="100%" alt="User Found Transition"/>
+  <img src="./assets/Split2_new.gif" width="100%" alt="User Found Transition"/>
   <br/>
-  <sub><b>User Found & Info Card</b></sub>
+  <sub><b>User Dashboard & Relics Display</b></sub>
 </td>
 </tr>
 <tr>
 <td align="center">
-  <img src="./assets/Split3.gif" width="100%" alt="Dashboard View"/>
+  <img src="./assets/Split3_new.gif" width="100%" alt="Dashboard View"/>
   <br/>
-  <sub><b>User Dashboard & Relics Display</b></sub>
+  <sub><b>User Login</b></sub>
 </td>
 </tr>
 </table>
@@ -36,13 +36,13 @@ A visually rich and data-driven full-stack web application built for **Honkai: S
 
 ## 🧩 Tech Stack
 
-| Layer | Technologies Used |
-|:------|:------------------|
+| Layer | Technologies Used                                |
+|:------|:-------------------------------------------------|
 | **Frontend** | ReactJS, TailwindCSS, React-Redux, Framer Motion |
-| **Backend** | Java Spring Boot, Swagger UI |
-| **Database** | MongoDB, Neo4j (for relational character data mapping) |
-| **API Source** | [Enka.Network API](https://api.enka.network/#/) |
-| **Architecture** | MVC (Model-View-Controller) |
+| **Backend** | Java Spring Boot, Swagger UI                     |
+| **Database** | MongoDB, Neo4j, Redis                            |
+| **API Source** | [Enka.Network API](https://api.enka.network/#/)  |
+| **Architecture** | MVC (Model-View-Controller)                      |
 
 ---
 
@@ -54,10 +54,11 @@ A visually rich and data-driven full-stack web application built for **Honkai: S
 - Smooth animated UI transitions and card displays  
 - Real-time data fetch from Enka API
 - User login and personalized dashboards  
+- Relic Showcase 
 
 ### 🚧 In Progress
 - Damage calculator (based on character build and relic stats)  
-- Relic database browser  
+- Relic searching, sorting and filtering
 - Build rankings 
 
 <img src="./assets/WIPTEXT.gif" width="100%" alt="Its a work in progress..."/>
