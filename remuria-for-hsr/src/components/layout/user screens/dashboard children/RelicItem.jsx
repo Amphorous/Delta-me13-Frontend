@@ -9,8 +9,6 @@ import bodyIcon from "../../../../assets/relicIcons/IconRelicBody.png"
 import footIcon from "../../../../assets/relicIcons/IconRelicFoot.png"
 import neckIcon from "../../../../assets/relicIcons/IconRelicNeck.png"
 import goodsIcon from "../../../../assets/relicIcons/IconRelicGoods.png"
-import { useSelector } from "react-redux";
-import { selectLocalization, selectRelicsInfo, selectTextMap, selectItemConfigRelic } from '../../../../store/loadedJSONSlice'; // relegate this to the backend soon
 import iconAttack from "../../../../assets/downloaded_icons/IconAttack.png"
 import iconBreakUp from "../../../../assets/downloaded_icons/IconBreakUp.png"
 import iconCriticalChance from "../../../../assets/downloaded_icons/IconCriticalChance.png"
@@ -29,6 +27,9 @@ import iconStatusResistance from "../../../../assets/downloaded_icons/IconStatus
 import iconThunderAddedRatio from "../../../../assets/downloaded_icons/IconThunderAddedRatio.png"
 import iconWindAddedRatio from "../../../../assets/downloaded_icons/IconWindAddedRatio.png"
 import iconSPRatio from "../../../../assets/downloaded_icons/IconSPRatio.png"
+import { useSelector } from "react-redux";
+import { selectLoc } from '../../../../store/localisationSlice';
+import axios from 'axios';
 
 function RelicItem({info, relicIndex}) {
     //meta info has [ rarity+1, setId, position/type ] (this is basically segmenting the tid into 3 parts)
@@ -39,16 +40,26 @@ function RelicItem({info, relicIndex}) {
     const [hoveredRelicRarity, setHoveredRelicRarity] = useState(false);
     const [relicAnimations, setRelicAnimations] = useState(false); // currently set to false, but implement a setting slice later and get this value from there
 
-    const loc = useSelector(selectLocalization);
-    const relics = useSelector(selectRelicsInfo);
-    const textMap = useSelector(selectTextMap);
-    const itemConfigRelic = useSelector(selectItemConfigRelic);
+    const [localisedRelicName, setLocalisedRelicName] = useState(null);
+    const [localisedSetName, setLocalisedSetName] = useState(null);
 
-    function getItemNameHashById(id){
-        const item = itemConfigRelic.find(r => r.ID == id);
-        const t = item?.ItemName?.Hash;
-        return t;
-    };
+    const selectedLoc = useSelector(selectLoc);
+
+    useEffect(() => {
+
+        if (info?.relic) {
+            axios.get(`${import.meta.env.VITE_TRANSLATION_API_URL}/hsr/relic-info/${selectedLoc}/${info.relic.tid}`)
+                .then((res) => {
+                    setLocalisedRelicName(res.data.ArtifactName);
+                    setLocalisedSetName(res.data.SetName);
+                })
+                .catch((err) => {
+                    console.log("Localisation Endpoint Error: ", err);
+                });
+        }
+
+    }, [selectedLoc, info?.relic?.tid]);
+
 
     function imageGetter(){
         if(relicMetaInfo){
@@ -74,6 +85,7 @@ function RelicItem({info, relicIndex}) {
             console.log("relic info: ",info.relic)
             let metaString = info.relic.tid;
             let metaArray = [ metaString.substring(0,1), metaString.substring(1, metaString.length-1), metaString.substring(metaString.length-1) ]
+            console.log("RELIC meta info: ", metaArray);
             setRelicMetaInfo(metaArray);
         }
     }, [info])
@@ -187,10 +199,10 @@ function RelicItem({info, relicIndex}) {
                                 <div className='text-white afacad-bold text-lg mt-2 '
                                     style={{lineHeight: 1.1}}
                                 >
-                                    {textMap[getItemNameHashById(info.relic.tid)]} {/*operation too heavy, immediate backend relegation required*/}
+                                    { localisedRelicName }
                                 </div>
                                 <div className='text-white afacad-bold text-sm mb-1.5'>
-                                    {loc["en"][relics["Sets"][relicMetaInfo[1]]["Name"]]} {/*might have to change loc to dynamic later*/}
+                                    { localisedSetName } 
                                 </div>
                             </div>
                         </>}

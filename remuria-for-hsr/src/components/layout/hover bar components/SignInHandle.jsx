@@ -35,7 +35,7 @@ function SignInHandle() {
   return (
     <div className='self-center relative'
       ref={dropdownRef} 
-      onClick={() => setShowLoginDropdown(true)}
+      onClick={() => setShowLoginDropdown((prev)=>!prev)}
       >
       {authStatus?.authenticated ? (
         <div 
