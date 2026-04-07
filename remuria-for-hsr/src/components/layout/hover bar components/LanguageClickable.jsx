@@ -7,6 +7,8 @@ import { selectLoc, setLoc } from '../../../store/localisationSlice';
 
 function LanguageClickable() {
 
+    const falsinator = false;
+
     const selectedLoc = useSelector(selectLoc);
     const dispatch = useDispatch();
     const allLocs = [
