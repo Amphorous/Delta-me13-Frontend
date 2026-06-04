@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDown } from 'react-icons/io';
-import { toggleSetting, setBackgroundImage, setCardBackgroundImage, selectSettings } from '../../store/settingsSlice';
+import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, selectSettings, selectThemeKey } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 
 // ─── primitives ──────────────────────────────────────────────────────────────
@@ -10,7 +10,7 @@ import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundI
 function Toggle({ on }) {
     return (
         <div className={`relative w-12 h-6 rounded-full transition-colors duration-200 shrink-0
-            ${on ? 'bg-violet-500' : 'bg-gray-600'}`}>
+            ${on ? 'bg-[var(--accent-solid)]' : 'bg-gray-600'}`}>
             <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
                 ${on ? 'translate-x-[1.625rem]' : 'translate-x-0.5'}`} />
         </div>
@@ -104,7 +104,7 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                                             onClick={() => onSelect(bg.key)}
                                             className={`relative rounded-xl overflow-hidden cursor-pointer w-32 h-20 shrink-0 transition-all duration-200
                                                 ${isActive
-                                                    ? 'ring-2 ring-violet-500 scale-[1.03]'
+                                                    ? 'ring-2 ring-[var(--accent-solid)] scale-[1.03]'
                                                     : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-[1.02]'
                                                 }`}
                                         >
@@ -113,7 +113,7 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                                                 <span className='text-white afacad-light text-[10px] truncate'>{bg.filename}</span>
                                             </div>
                                             {isActive && (
-                                                <div className='absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center'>
+                                                <div className='absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[var(--accent-solid)] flex items-center justify-center'>
                                                     <div className='w-1.5 h-1.5 rounded-full bg-white' />
                                                 </div>
                                             )}
@@ -153,6 +153,66 @@ function CardBackgroundSelector() {
     );
 }
 
+// ─── theme selector ───────────────────────────────────────────────────────────
+
+const THEME_OPTIONS = [
+    {
+        key: 'purple',
+        label: 'Purple',
+        swatch: 'bg-violet-500',
+    },
+    {
+        key: 'red',
+        label: 'Red',
+        swatch: 'bg-rose-500',
+    },
+    {
+        key: 'green',
+        label: 'Green',
+        swatch: 'bg-emerald-500',
+    },
+    {
+        key: 'adaptive',
+        label: 'Adaptive',
+        swatch: null, // rendered as gradient
+    },
+];
+
+function ThemeSelector() {
+    const dispatch = useDispatch();
+    const themeKey = useSelector(selectThemeKey);
+
+    return (
+        <div className='flex gap-2 px-4 py-3 flex-wrap'>
+            {THEME_OPTIONS.map(({ key, label, swatch }) => {
+                const active = themeKey === key;
+                return (
+                    <button
+                        key={key}
+                        onClick={() => dispatch(setTheme(key))}
+                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl transition-all cursor-pointer select-none
+                            ${active ? 'bg-white/10 ring-1 ring-white/30' : 'hover:bg-white/5'}`}
+                    >
+                        {swatch ? (
+                            <div className={`w-7 h-7 rounded-full ${swatch} ${active ? 'ring-2 ring-white/70 ring-offset-1 ring-offset-transparent' : ''}`} />
+                        ) : (
+                            <div className={`w-7 h-7 rounded-full ${active ? 'ring-2 ring-white/70 ring-offset-1 ring-offset-transparent' : ''}`}
+                                style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #f43f5e 50%, #10b981 100%)' }}
+                            />
+                        )}
+                        <p className={`afacad-light text-xs ${active ? 'text-white' : 'text-white/50'}`}>{label}</p>
+                    </button>
+                );
+            })}
+            {themeKey === 'adaptive' && (
+                <p className='w-full afacad-light text-white/30 text-xs px-1 mt-0.5'>
+                    Adaptive samples the background image to generate a matching accent colour.
+                </p>
+            )}
+        </div>
+    );
+}
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 function Settings() {
@@ -163,8 +223,12 @@ function Settings() {
                 Settings
             </p>
             <p className='afacad-light text-white/30 text-sm mb-8'>
-                Re<span className='text-violet-500/70'>:</span>muria preferences
+                Re<span className='text-[var(--accent-colon)]'>:</span>muria preferences
             </p>
+
+            <Section title="Theme">
+                <ThemeSelector />
+            </Section>
 
             <Section title="Relic">
                 <SettingsRow

@@ -94,7 +94,7 @@ function UserLongCard({ uid }) {
             case "EU": return 'bg-[#285AFD]';
             case "THM": return 'bg-[#2feb25]';
         }
-        return 'bg-purple-400';
+        return 'bg-[var(--accent-solid)]';
     }
 
     function upsertUserRequest(uid) {

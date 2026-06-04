@@ -143,9 +143,9 @@ function DashboardsRelics() {
              </button>
           </div>
           <div className='absolute right-0 mr-4 flex items-center gap-2' onMouseDown={e => e.stopPropagation()}>
-            <FaList  className={`${!relicShowcaseStyle ? "text-violet-400" : "text-gray-500"} transition`}/>
+            <FaList  className={`${!relicShowcaseStyle ? "text-[var(--accent-muted)]" : "text-gray-500"} transition`}/>
             <Switcher1 value={relicShowcaseStyle} setValue={setRelicShowcaseStyle} settingName="relicShowcaseStyle"/>
-            <BsFillGridFill  className={`${relicShowcaseStyle ? "text-violet-400" : "text-gray-500"} transition`}/>
+            <BsFillGridFill  className={`${relicShowcaseStyle ? "text-[var(--accent-muted)]" : "text-gray-500"} transition`}/>
           </div>
         </div>
       </div>

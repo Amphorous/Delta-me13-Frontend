@@ -207,7 +207,7 @@ function RelicList({ info, relicPageNumber }) {
     <div className='w-full flex flex-col gap-1'>
 
       {/* header */}
-      <div className='flex items-center gap-3 px-3 py-1 text-white/25 afacad-light text-xs tracking-widest uppercase select-none'>
+      <div className='flex items-center gap-3 px-3 py-1 text-white/55 afacad-bold text-xs tracking-widest uppercase select-none'>
         <div className='w-11 shrink-0' />
         <div className='w-52 shrink-0'>Name</div>
         <div className='w-10 text-center shrink-0'>Lvl</div>

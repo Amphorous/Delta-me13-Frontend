@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { LuUserRound } from "react-icons/lu";
 import { useDispatch, useSelector } from 'react-redux';
 import { checkAuth } from '../../../store/authSlice';
+import { fetchBindings } from '../../../store/bindingsSlice';
 import LoginDropdown from './LoginDropdown';
 
 function SignInHandle() {
@@ -17,10 +18,8 @@ function SignInHandle() {
   }, [dispatch]);
 
   useEffect(() => {
-    console.log(":::::::::::::::::::::::::::::::::::::::::::: ");
-    console.log("auth status: ", authStatus);
-    console.log(":::::::::::::::::::::::::::::::::::::::::::: ");
-  }, [authStatus]);
+    if (authStatus?.authenticated) dispatch(fetchBindings());
+  }, [authStatus?.authenticated, dispatch]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -43,7 +42,7 @@ function SignInHandle() {
         <div 
 
           className='flex items-center justify-center p-1.5 pr-2 mx-2 rounded-full border-[1px]
-          border-purple-400 cursor-pointer hover:border-purple-500 transition relative'
+          border-[var(--accent-muted)] cursor-pointer hover:border-[var(--accent-solid)] transition relative'
           >
           <img src={authStatus?.avatarUrl} alt="" className="rounded-full h-[35px]" />
           <p className="text-white afacad-light ml-1.5">{authStatus?.username}</p>
@@ -53,7 +52,7 @@ function SignInHandle() {
         <div 
           
           className='flex items-center justify-center p-2.5 mx-2 rounded-full border-[1px]
-            border-purple-400 cursor-pointer hover:border-purple-500 hover:bg-gray-400/20 transition relative'
+            border-[var(--accent-muted)] cursor-pointer hover:border-[var(--accent-solid)] hover:bg-gray-400/20 transition relative'
         >
           <LuUserRound size={24}/>
           <p className="text-white afacad-light ml-1.5">Login</p>

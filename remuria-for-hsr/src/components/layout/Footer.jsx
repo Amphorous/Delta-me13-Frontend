@@ -21,8 +21,8 @@ function Footer() {
         <div className='top-0 w-full flex items-center justify-between px-4'>
 
           {/* left — brand text */}
-          <p className='afacad-light text-white/25 text-xs select-none'>
-            Re<span className='text-violet-500/50'>:</span>muria - Honkai: Star Rail
+          <p className='afacad-light text-[var(--accent-dim)] text-xs select-none'>
+            Re<span className='text-[var(--accent-colon)]'>:</span>muria - Honkai: Star Rail
           </p>
 
           {/* centre — expand toggle */}
@@ -37,7 +37,7 @@ function Footer() {
           </div>
 
           {/* right — status text */}
-          <p className='afacad-light text-white/20 text-xs select-none'>
+          <p className='afacad-light text-[var(--accent-dim)] text-xs select-none'>
             Under construction
           </p>
 
