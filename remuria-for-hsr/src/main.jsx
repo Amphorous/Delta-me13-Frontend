@@ -10,6 +10,7 @@ import Dashboard from './components/layout/user screens/Dashboard'
 import DashboardsRelics from './components/layout/user screens/dashboard children/DashboardsRelics'
 import DashboardBuilds from './components/layout/user screens/dashboard children/DashboardBuilds'
 import Validate from './components/layout/user screens/dashboard children/Validate'
+import Settings from './components/layout/Settings'
 
 const browserRouterObject = createBrowserRouter([
   {
@@ -31,6 +32,11 @@ const browserRouterObject = createBrowserRouter([
       {
         path: "",
         element: <Navigate to="home" />
+      },
+      {
+        path: "settings",
+        element: <Settings />,
+        handle: { crumb: () => 'Settings' }
       },
       {
         path: "dashboard/:uid",

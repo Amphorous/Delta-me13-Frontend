@@ -26,7 +26,7 @@ function LoginDropdown() {
                 
                 <p className='afacad-light italic text-gray-400/60'>User not logged in.</p>
                 <a className="text-white afacad-bold self-center mt-1 rounded-xl py-1 px-3 flex items-center gap-2 hover:bg-gray-600/20 cursor-pointer text-xl"
-                    href={`${import.meta.env.VITE_CELESTIA_API_URL}/oauth2/authorization/discord`}
+                    href={`${import.meta.env.VITE_AUTH_API_URL}/oauth2/authorization/discord`}
                 >
                     <span className='text-blue-500'><FaDiscord /></span>
                     <p>Login with <span className='text-blue-500'>Discord</span></p>

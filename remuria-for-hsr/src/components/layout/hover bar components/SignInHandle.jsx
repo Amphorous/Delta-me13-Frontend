@@ -17,7 +17,9 @@ function SignInHandle() {
   }, [dispatch]);
 
   useEffect(() => {
+    console.log(":::::::::::::::::::::::::::::::::::::::::::: ");
     console.log("auth status: ", authStatus);
+    console.log(":::::::::::::::::::::::::::::::::::::::::::: ");
   }, [authStatus]);
 
   useEffect(() => {

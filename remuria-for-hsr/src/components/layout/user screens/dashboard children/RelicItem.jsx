@@ -29,6 +29,7 @@ import iconWindAddedRatio from "../../../../assets/downloaded_icons/IconWindAdde
 import iconSPRatio from "../../../../assets/downloaded_icons/IconSPRatio.png"
 import { useSelector } from "react-redux";
 import { selectLoc } from '../../../../store/localisationSlice';
+import { selectRelicAnimations } from '../../../../store/settingsSlice';
 import axios from 'axios';
 
 function RelicItem({info, relicIndex}) {
@@ -38,7 +39,7 @@ function RelicItem({info, relicIndex}) {
 
     const [relicMetaInfo, setRelicMetaInfo] = useState(null)
     const [hoveredRelicRarity, setHoveredRelicRarity] = useState(false);
-    const [relicAnimations, setRelicAnimations] = useState(false); // currently set to false, but implement a setting slice later and get this value from there
+    const relicAnimations = useSelector(selectRelicAnimations);
 
     const [localisedRelicName, setLocalisedRelicName] = useState(null);
     const [localisedSetName, setLocalisedSetName] = useState(null);
@@ -48,6 +49,7 @@ function RelicItem({info, relicIndex}) {
     useEffect(() => {
 
         if (info?.relic) {
+            console.log("fetching localisation for: ", info.relic.tid, " with loc: ", selectedLoc)
             axios.get(`${import.meta.env.VITE_TRANSLATION_API_URL}/hsr/relic-info/${selectedLoc}/${info.relic.tid}`)
                 .then((res) => {
                     setLocalisedRelicName(res.data.ArtifactName);
@@ -155,6 +157,7 @@ function RelicItem({info, relicIndex}) {
         else if(statType.toLowerCase().includes("statusresistance")) return iconStatusResistance
         else if(statType.toLowerCase().includes("thunderaddedratio")) return iconThunderAddedRatio
         else if(statType.toLowerCase().includes("windaddedratio")) return iconWindAddedRatio
+        else if(statType.toLowerCase().includes("heal")) return iconMaxHP
         else if(statType.toLowerCase().includes("sp")) return iconSPRatio
     }
 
@@ -202,7 +205,7 @@ function RelicItem({info, relicIndex}) {
                                     { localisedRelicName }
                                 </div>
                                 <div className='text-white afacad-bold text-sm mb-1.5'>
-                                    { localisedSetName } 
+                                    { localisedSetName }
                                 </div>
                             </div>
                         </>}
@@ -215,7 +218,7 @@ function RelicItem({info, relicIndex}) {
                             <div className='h-[5%] text-center text-white afacad-bold text-sm my-1'>+{`${(info.relic.level === "null" ? 0 : info.relic.level)}`}</div>
                             <div className='h-full w-full mt-1 flex flex-col items-center justify-center'>
                                 <img src={`${statImageGetter(info.relic.mainType)}`} alt=";(" className="aspect-square w-1/2 mb-3 object-contain " />
-                                {statValueGetter(info.relic.mainValue, info.relic.mainType)} 
+                                {statValueGetter(info.relic.mainValue, info.relic.mainType)}
                             </div>
 
                         </div>
@@ -226,11 +229,11 @@ function RelicItem({info, relicIndex}) {
 
                                 return (
                                     <div key={index} className='h-[22%] w-full m-1'>
-                                        {sub ? 
+                                        {sub ?
                                         <>
                                             <div className='w-full bg-black/20 rounded-md h-full flex items-center'>
                                                 <img src={`${statImageGetter(sub.type)}`} alt=";(" className="aspect-square h-1/2 object-contain mx-3" />
-                                                {statValueGetter(sub.value, sub.type)} 
+                                                {statValueGetter(sub.value, sub.type)}
                                             </div>
                                         </> : <>
                                             <div className='w-full bg-gray-700 rounded-md h-full flex items-center justify-center text-white/40 afacad-bold'>
@@ -262,7 +265,7 @@ function RelicItem({info, relicIndex}) {
                             className="flex flex-col justify-between h-full items-center m-1 my-3 bg-bladck"
                             initial = {{ opacity: 0 }}
                             animate = {{ opacity: 1 }}
-                            exit={{ 
+                            exit={{
                                 opacity: 0,
                                 transition: { duration: 0.15, ease: "easeOut" }
                             }}
@@ -270,14 +273,14 @@ function RelicItem({info, relicIndex}) {
                                 opacity: { duration: 0.2, ease: "easeInOut", delay: 0.07 }
                             }}
                         >
-                            { relicMetaInfo && 
+                            { relicMetaInfo &&
                                 <div className={`flex flex-col justify-between h-full w-full items-center ${rarityTextColourGetter()} mix-blend-lighten`}>
                                     <div className="text-center flex flex-col justify-center items-center ">
                                         {Array.from({ length: relicMetaInfo[0] - 1 }).map((_, i) => (
                                             <FaStar key={i} size={14} />
                                         ))}
                                     </div>
-                                    <div className={`text-center text-sm vertical-text barcode-font mr-2.5  wider                                    
+                                    <div className={`text-center text-sm vertical-text barcode-font mr-2.5  wider
                                     `}>{`${cleanString(info.relic.relicId)}`}</div>
                                 </div>
                             }

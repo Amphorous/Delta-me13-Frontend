@@ -49,8 +49,8 @@ function UserStrip({user, setCardState}) {
     }
 
   return (
-    <div className={`relative flex flex-col justify-between my-1 rounded-xl transition py-2 px-2 
-      ${isPressed ? 'bg-black/50' : 'hover:bg-gray-400/25'}`}
+    <div className={`relative flex items-center justify-between my-0.5 rounded-xl transition-all duration-150 py-2 px-2 cursor-pointer
+      ${isPressed ? 'bg-black/50 scale-[0.98]' : hovered ? 'bg-gray-400/20 scale-[1.01]' : 'scale-100'}`}
       onClick={() => loadUserCard()}
       onMouseEnter={() => setHovered(true)}
       onMouseDown={() => setIsPressed(true)}
@@ -60,40 +60,38 @@ function UserStrip({user, setCardState}) {
         setHovered(false);
       }}
     >
-
-        {
-            (hovered) && 
-            <div className="aspect-square bg-red-600/50 hover:bg-red-600 transition h-[25%] 
-            absolute rounded-full text-white/50 hover:text-white flex items-center justify-center cursor"
-                onClick={()=>{localStorageUserItemDelete(user.uid)}}
+        {hovered &&
+            <div className="absolute left-1 top-1/2 -translate-y-1/2 bg-red-600/50 hover:bg-red-600 transition w-6 h-6
+            rounded-full text-white/60 hover:text-white flex items-center justify-center z-10"
+                onClick={(e) => { e.stopPropagation(); localStorageUserItemDelete(user.uid); }}
             >
-                <MdDelete />
+                <MdDelete size={13}/>
             </div>
         }
 
-        <div className='flex justify-between  items-center'>
-            
-            <div className="flex namesandpicarea items-center w-[90%] max-w-[90%]">
-                <div className='h-full picarea aspect-square rounded-full items-center'>
-                <img src={profileImageGetter(user.headIcon)} className='aspect-square bg-black/12 rounded-full ' />
-                    
-                </div>
-                <div className="flex flex-col pl-3 justify-center w-full">
-                    <p className="afacad-semi-bold text-white text-[180%]
-                    truncate whitespace-nowrap overflow-hidden text-ellipsis  mix-blend-difference">{user.nickname}</p>
-                    <p className='afacad-semi-bold text-[#ebebeb] text-[70%] -mt-1 max-w-[75%] 
-                    truncate whitespace-nowrap overflow-hidden text-ellipsis  mix-blend-difference'>{user.signature}</p>
-                </div>
+        <div className={`flex items-center min-w-0 flex-1 transition-all duration-150 ${hovered ? 'pl-7' : 'pl-0'}`}>
+            <img src={profileImageGetter(user.headIcon)} className='w-9 h-9 aspect-square bg-black/20 rounded-full shrink-0'
+                onError={(e) => {
+                    const anon = "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
+                    if (e.target.src.includes("/Series/")) {
+                        e.target.src = e.target.src.replace("/Series/", "/");
+                    } else if (e.target.src !== anon) {
+                        e.target.src = anon;
+                    }
+                }}
+            />
+            <div className="flex flex-col pl-2.5 justify-center min-w-0">
+                <p className="afacad-semi-bold text-white text-base leading-tight
+                truncate whitespace-nowrap overflow-hidden">{user.nickname}</p>
+                <p className='afacad-light text-white/50 text-xs truncate whitespace-nowrap overflow-hidden'>{user.signature}</p>
             </div>
-
-            <div className={`flex regionarea ${regionColourPicker(user.region)} items-center text-center 
-            vertical-text justify-center px-3 mr-1.5 afacad-semi-bold text-[95%] rounded`} >
-                {user.region}
-            </div>
-
         </div>
-        
-        
+
+        <div className={`shrink-0 ${regionColourPicker(user.region)} text-black
+        px-1.5 py-0.5 ml-2 afacad-bold text-[10px] rounded-full`}>
+            {user.region}
+        </div>
+
     </div>
   )
 }
