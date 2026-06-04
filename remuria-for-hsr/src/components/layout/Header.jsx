@@ -24,11 +24,11 @@ function Header() {
 
 
   return (
-    <div className="min-w-screen flex flex-col max-h-[12vh]">
-      <div className="bg-gradient-to-b from-black to-transparent text-white h-[10vh] flex justify-between">
+    <div className="w-full flex flex-col">
+      <div className="bg-gradient-to-b from-black to-transparent text-white h-[10vh] min-h-[56px] flex justify-between">
         <div className="flex items-center">
           <Link to="/home">
-            <div className="afacad-bold text-7xl pl-9">
+            <div className="afacad-bold pl-6 md:pl-9" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
               Re<span className="text-violet-500">:</span>muria
             </div>
           </Link>

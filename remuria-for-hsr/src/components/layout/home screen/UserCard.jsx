@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { removeFocus, setFocus } from '../../../store/userCardSlice';
 import avatars from '../../../assets/pfps.json';
 import ach from '../../../assets/achievementIcon.webp';
-import alb from '../../../assets/albedo.webp';
+import { cardBackgroundImages } from '../../../assets/backgroundImages';
+import { selectCardBackgroundImageKey } from '../../../store/settingsSlice';
 import { IoMdRefresh } from "react-icons/io";
 import { motion, AnimatePresence } from 'framer-motion';
 import { addOrReplaceUser } from '../../../store/localUsersSlice';
@@ -23,6 +24,8 @@ function UserCard({uid, showButtons}) {
     //dont forget to add removeFocus
     const localUsers = useSelector( state => state.localUsers );
     const focusedUser = useSelector( state => state.focusedUser );
+    const cardBgKey = useSelector(selectCardBackgroundImageKey);
+    const cardBgUrl = (cardBackgroundImages.find(b => b.key === cardBgKey) ?? cardBackgroundImages[0])?.url;
 
     const [copyStatus, setCopyStatus] = useState("");
 
@@ -196,55 +199,61 @@ function UserCard({uid, showButtons}) {
   return (
     <div className='w-full'>
 
-        {showButtons && 
+        {showButtons &&
             <div className="afacad-bold text-8xl text-white text-wrap px-4 py-2 mb-4 rounded-3xl flex items-center">
                 <p className='leading-[85%]'>User Found!</p>
             </div>
         }
 
-        <motion.div className='aspect-[31.5/15] w-full  relative rounded-2xl ' 
+        <motion.div className='aspect-[31.5/15] w-full  relative rounded-2xl '
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
         >
-            {/* https://enka.network/ui/UI_NameCardPic_Shougun_P.png */}
-            <img src={alb} className='w-full absolute -z-10 rounded-2xl' />
+            <img src={cardBgUrl} className='w-full absolute -z-10 rounded-2xl' />
             <div className="absolute aspect-[31.5/17] w-full bg-gray-800/50 rounded-2xl backdrop-blur-[3px]">
 
                 <div className="absolute text-white px-0 vertical-lmao left-[3.2%] top-[16.3%] flex
                  libre-baskerville-regular backdrop-blur-[5px] rounded-4xl z-10">
                     TL: {String(focusedUser?.level ?? "")}
                 </div>
-                
+
                 <div className="border-2 border-dashed w-[95%] ml-[5%] rounded-2xl h-full border-white/42 z-0 flex flex-col justify-between relative">
 
-                    {(showButtons) && 
-                    <div className=" absolute flex flex-col  items-center 
-                    justify-center libre-baskerville-regular right-0 top-1/4  -mr-[2px]">
+                    {(showButtons) &&
+                    <div className="absolute flex flex-col items-center
+                    justify-center libre-baskerville-regular right-0 top-1/4 -mr-px">
 
-                        <div className="flex items-center justify-center bg-black/50 text-white backdrop-blur-sm py-3 px-2 mb-3
-                        rounded-l-full hover:bg-white hover:text-black hover:border-black/42 transition
-                        border-l-2 border-t-2 border-b-2 border-dashed border-white/42 cursor-pointer"
+                        <div className="flex items-center justify-center bg-black/60 text-white backdrop-blur-sm py-3 px-2 mb-2
+                        rounded-l-xl hover:bg-white hover:text-black transition
+                        border-l border-t border-b border-white/20 cursor-pointer"
                             onClick={()=>{removeFocusOnBackPress()}}
                         >
-                            <IoMdClose />
+                            <IoMdClose size={14}/>
                         </div>
 
-                        <div className="flex items-center justify-center bg-black/50 text-white backdrop-blur-sm py-3 px-2 
-                        rounded-l-full hover:bg-white hover:text-black hover:border-black/42 transition
-                        border-l-2 border-t-2 border-b-2 border-dashed border-white/42 cursor-pointer"
+                        <div className="flex items-center justify-center bg-black/60 text-white backdrop-blur-sm py-3 px-2
+                        rounded-l-xl hover:bg-white hover:text-black transition
+                        border-l border-t border-b border-white/20 cursor-pointer"
                             onClick={()=>{navigate(`/dashboard/${uid}`)}}
                         >
-                            <IoIosArrowForward />
+                            <IoIosArrowForward size={14}/>
                         </div>
-                        
+
                     </div>}
 
                     <div className="cardbody flex flex-col w-full ">
                         <div className="flex nameandpfpbox ml-7 mr-5 mt-5 items-center ">
-                            <img src={profileImageGetter(focusedUser?.headIcon)} className='h-full aspect-square bg-black/12 rounded-full 
-                                
-                            ' />
+                            <img src={profileImageGetter(focusedUser?.headIcon)} className='h-full aspect-square bg-black/12 rounded-full'
+                                onError={(e) => {
+                                    const anon = "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
+                                    if (e.target.src.includes("/Series/")) {
+                                        e.target.src = e.target.src.replace("/Series/", "/");
+                                    } else if (e.target.src !== anon) {
+                                        e.target.src = anon;
+                                    }
+                                }}
+                            />
                             <div className="flex flex-col overflow-hidden text-ellipsis">
                                 <p className="libre-baskerville-bold text-white text-[300%]
                                 ml-4 overflow-hidden text-ellipsis whitespace-nowrap">{focusedUser?.nickname}</p>
@@ -253,36 +262,32 @@ function UserCard({uid, showButtons}) {
                             </div>
                         </div>
 
-                        <div className="flex flex-col ml-10 mt-5">
+                        <div className="flex flex-col ml-6 mt-4">
 
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5">
 
-                                <div className={`${regionColourPicker(focusedUser?.region)} afacad-bold text-black px-2 
-                                text-center rounded-sm flex justify-center items-center`}>
+                                <div className={`${regionColourPicker(focusedUser?.region)} afacad-bold text-black px-2.5 py-0.5
+                                text-xs text-center rounded-full flex justify-center items-center`}>
                                     {focusedUser?.region}
                                 </div>
 
-                                <div className="bg-[#93590D] afacad-bold text-white px-2 text-center rounded-sm flex justify-center items-center">
-                                    <img src={ach} className='w-[24px] h-[24px]' />
+                                <div className="bg-amber-900/70 border border-amber-600/30 afacad-bold text-amber-100 px-2.5 py-0.5 text-xs text-center rounded-full flex gap-1 justify-center items-center">
+                                    <img src={ach} className='w-[14px] h-[14px]' />
                                     {focusedUser?.achievementCount}
                                 </div>
 
-                                <div className={`${(copyStatus === "")?'bg-[#93590D]':((copyStatus === "Copied")?'bg-[#89b012]':'bg-[#a1381b]')} 
-                                afacad-bold text-white px-2 text-center rounded-sm flex justify-center 
-                                items-center cursor-copy`}
+                                <div className={`${(copyStatus === "")?'bg-white/10 border border-white/20':((copyStatus === "Copied")?'bg-green-800/60 border border-green-500/30':'bg-red-800/60 border border-red-500/30')}
+                                afacad-bold text-white px-2.5 py-0.5 text-xs text-center rounded-full flex justify-center
+                                items-center cursor-copy transition`}
                                     onClick={() => {
                                         navigator.clipboard.writeText(uid)
                                         .then(() => {
-                                            setCopyStatus("Copied"); 
-                                            setTimeout(() => {
-                                                setCopyStatus(""); 
-                                            }, 750);
+                                            setCopyStatus("Copied");
+                                            setTimeout(() => { setCopyStatus(""); }, 750);
                                         })
                                         .catch(err => {
-                                            setCopyStatus("Failed"); 
-                                            setTimeout(() => {
-                                                setCopyStatus(""); 
-                                            }, 750);
+                                            setCopyStatus("Failed");
+                                            setTimeout(() => { setCopyStatus(""); }, 750);
                                         });
                                     }}
                                 >
@@ -295,16 +300,12 @@ function UserCard({uid, showButtons}) {
                                     </>}
                                 </div>
 
-                                {(!focusedUser?.buildsPublic) && 
-                                
-                                    <div className="bg-[#93310d] afacad-bold text-white px-2 text-center rounded-sm flex gap-1 justify-center items-center">
-                                        <ImEyeBlocked size={18}/>
+                                {(!focusedUser?.buildsPublic) &&
+                                    <div className="bg-red-900/60 border border-red-500/30 afacad-bold text-red-200 px-2.5 py-0.5 text-xs text-center rounded-full flex gap-1 justify-center items-center">
+                                        <ImEyeBlocked size={12}/>
                                         Builds Private
                                     </div>
-
                                 }
-
-                                
 
                             </div>
 
@@ -312,7 +313,7 @@ function UserCard({uid, showButtons}) {
                     </div>
 
 
-                    <div className="flex timeoutbox text-white/70 afacad-light ml-4 mb-1.5 justify-between">
+                    <div className="flex timeoutbox text-white/50 afacad-light text-xs ml-4 mb-2 justify-between items-center">
                         <div className="flex">
                             Last Updated: {(timeout+60 < 60)? <>
                                 {timeout + 60} seconds ago
@@ -327,8 +328,8 @@ function UserCard({uid, showButtons}) {
                         </div>
 
                         {(isRefreshPossible && isRefreshButtonActive)?
-                            <div className={` ${(isPressed)?'bg-black/80 text-white':'bg-white text-black/70'} transition 
-                            px-2 rounded-4xl mr-2 flex items-center justify-center cursor-pointer `}
+                            <div className={`${(isPressed)?'bg-black/80 text-white':'bg-white/15 border border-white/20 text-white/70 hover:bg-white hover:text-black/80'} transition
+                            px-2.5 py-0.5 rounded-full mr-2 flex items-center justify-center cursor-pointer text-xs`}
                             onMouseEnter={() => setHovered(true)}
                             onMouseLeave={() => {{
                                 setIsPressed(false);
@@ -363,8 +364,8 @@ function UserCard({uid, showButtons}) {
 
                             <IoMdRefresh />
                         </div>:
-                        <div className='px-2 rounded-4xl mr-2 flex items-center justify-center bg-gray-800 gap-1'>      
-                             {timeout*-1} seconds <IoMdRefresh />       
+                        <div className='px-2.5 py-0.5 rounded-full mr-2 flex items-center justify-center bg-white/5 border border-white/10 text-white/30 gap-1 text-xs cursor-not-allowed'>
+                             {timeout*-1}s <IoMdRefresh />
                         </div>}
                         {/* / */}
                         <div className="absolute invisible pointer-events-none h-0 overflow-hidden afacad-light">

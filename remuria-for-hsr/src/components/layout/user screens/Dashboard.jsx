@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import UserCard from '../home screen/UserCard';
+import UserLongCard from './UserLongCard';
 import PillSlidingSelectBar from './dashboard slider/PillSlidingSelectBar';
 
 function Dashboard() {
@@ -22,18 +22,18 @@ function Dashboard() {
 
 
   return (
-    <div className='flex flex-col sm:flex-row justify-around bg-ambder-400 w-full'>
+    <div className='flex flex-col w-full h-full px-4 pt-3 pb-2 gap-3'>
 
-      <div className=" maxs-ws-[480px] min-w-[480px] flex flex-col justify-center ">
-        <p className="afacad-bold xl:text-[700%] leading-[80%] text-white text-[500%] mb-[5%] lg:mb-[10%]">User <br/> Dashboard</p>
-        <UserCard uid={uid} showButtons={false}/>
+      <div className='shrink-0'>
+        <UserLongCard uid={uid} />
       </div>
 
-      <div className=" w-[60vw] min-w-[480] flex flex-col items-center "> {/* not properly small screen compatible yet */}
+      <div className='shrink-0 flex justify-center'>
         <PillSlidingSelectBar uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector}/>
-        <div className="bg-gfray-400 w-full h-full mt-5">
-          <Outlet />
-        </div>
+      </div>
+
+      <div className='flex-1 min-h-0'>
+        <Outlet />
       </div>
 
     </div>

@@ -89,9 +89,9 @@ function Home() {
   }
 
   return (
-    <div className='flex-1 bg-acmber-400 mx-5 flex justify-around items-center bg-gdray-800'>
+    <div className='flex-1 mx-5 flex justify-around items-center'>
 
-      <div className="flex flex-col searchbar h-[73%] bg-avmber-50  aspect-[4.2/6] max-h-[65vh] max-w-[25vw] min-h-[480px] min-w-[336px]">
+      <div className="flex flex-col searchbar h-[73%] aspect-[4.2/6] max-h-[65vh] min-w-[300px] max-w-[380px] min-h-[480px] shrink-0">
         
         <form onSubmit={handleSubmit(submitHandler)}
           className=' h-[10%] mb-[2%] text-[120%] flex items-center relative justify-end' 
@@ -182,13 +182,13 @@ function Home() {
         </>
       } */}
 
-      {focusedUser?.uid !== "" && localUsers.some(u => u.uid === focusedUser?.uid) && requiredWidth > 0 > 0 ? (
+      {focusedUser?.uid !== "" && localUsers.some(u => u.uid === focusedUser?.uid) && requiredWidth > 0 ? (
         <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth }}>
 
           <UserCard uid={focusedUser?.uid} showButtons={true}/>
 
         </div>
-        ) : 
+        ) :
 
           <>
             {(requiredWidth > 0 && cardState === -1)?
@@ -198,7 +198,7 @@ function Home() {
               <FailedUserCard setCardState={setCardState} />
 
             </div>
-          
+
           :
             <div className="flex items-center justify-center mx-5" ref={testRef}>
               <div className="items-center flex flex-col">
@@ -206,13 +206,13 @@ function Home() {
                   Welcome to
                 </p>
                 <p className="afacad-bold text-9xl text-white mt-[-1.5rem]">
-                  Re<span className='text-purple-800'>:</span>muria
+                  Re<span className='text-purple-500'>:</span>muria
                 </p>
               </div>
             </div>
           }
           </>
-          
+
         }
 
 

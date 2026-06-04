@@ -149,6 +149,7 @@ function RelicList({ info, relicPageNumber }) {
             else if(statType.toLowerCase().includes("statusresistance")) return iconStatusResistance
             else if(statType.toLowerCase().includes("thunderaddedratio")) return iconThunderAddedRatio
             else if(statType.toLowerCase().includes("windaddedratio")) return iconWindAddedRatio
+            else if(statType.toLowerCase().includes("heal")) return iconMaxHP
             else if(statType.toLowerCase().includes("sp")) return iconSPRatio
     }
     
@@ -167,79 +168,129 @@ function RelicList({ info, relicPageNumber }) {
         return [ tid.substring(0,1), tid.substring(1, tid.length-1), tid.substring(tid.length-1) ]
     }
 
+  function statNameGetter(statType) {
+    const t = statType.toLowerCase();
+    if (t.includes("criticaldamage"))    return "CRIT DMG";
+    if (t.includes("criticalchance"))    return "CRIT Rate";
+    if (t.includes("attack"))            return "ATK";
+    if (t.includes("break"))             return "Break";
+    if (t.includes("defence"))           return "DEF";
+    if (t.includes("fireaddedratio"))    return "Fire";
+    if (t.includes("iceaddedratio"))     return "Ice";
+    if (t.includes("imaginaryaddedratio")) return "Imaginary";
+    if (t.includes("heal"))              return "Healing";
+    if (t.includes("joy"))               return "Elation";
+    if (t.includes("hp"))                return "HP";
+    if (t.includes("physicaladdedratio")) return "Physical";
+    if (t.includes("quantumaddedratio")) return "Quantum";
+    if (t.includes("speed"))             return "SPD";
+    if (t.includes("statusprobability")) return "Eff Hit";
+    if (t.includes("statusresistance"))  return "Eff RES";
+    if (t.includes("thunderaddedratio")) return "Lightning";
+    if (t.includes("windaddedratio"))    return "Wind";
+    if (t.includes("sp"))                return "Energy";
+    return "";
+  }
+
+  function inlineStatValue(statValue, statType) {
+    const isPercent = statType.toLowerCase().includes("ratio") ||
+                      statType.toLowerCase().includes("chance") ||
+                      statType.toLowerCase().includes("resistance") ||
+                      statType.toLowerCase().includes("probability") ||
+                      statType.toLowerCase().includes("criticaldamage");
+    return isPercent
+      ? `+${(statValue * 100).toFixed(1)}%`
+      : `+${statValue.toFixed(1)}`;
+  }
+
   return (
-    <div className='h-full w-full rounded-md'>
-      <table className='w-full table-auto bg-gray-900/60 backdrop-blur-md text-white rounded-md'>
-        <thead className='bg-gray-800/50 rounded-md'>
-          <tr>
-            <th className='px-4 py-1.5 text-left'>#</th>
-            <th className='px-4 py-1.5 text-left'>Image</th>
-            <th className='px-4 py-1.5 text-left'>Slot</th>
-            <th className='px-4 py-1.5 text-left'>Name</th>
-            <th className='px-4 py-1.5 text-left'>Set</th>
-            <th className='px-4 py-1.5 text-left'>Level</th>
-            <th className='px-4 py-1.5 text-left'>Main Stat</th>
-            <th className='px-4 py-1.5 text-left'>Sub Stats</th>
-            <th className='px-4 py-1.5 text-left'>Rarity</th>
-          </tr>
-        </thead>
-        <tbody>
-          {info && info.map((record, index) => {
-            if (!record || record === "lastItem" || record === "error" || !record.relic) return null;
-            const relic = record.relic;
-            const metaArray = relic.tid ? metaArrayGetter(relic.tid) : [];
-            return (
-              <tr key={index} className={`border-b border-gray-700 ${rarityColourGetter(metaArray)}`}>
-                <td className='px-4 py-1.5'>
-                  <div className='afacad-bold text-sm text-gray-300'>{(relicPageNumber - 1) * 20 + index + 1}</div>
-                </td>
-                <td className='px-4 py-1.5'>
-                  <img src={imageGetter(metaArray)} alt="" className="w-10 h-10 object-contain" />
-                </td>
-                <td className='px-4 py-1.5'>
-                  <img src={relicIconGetter(metaArray)} alt="" className="w-6 h-6 object-contain" />
-                </td>
-                <td className='px-4 py-1.5'>
-                  <div className='afacad-bold text-sm'>{ localisedRelicName[index] }</div>
-                </td>
-                <td className='px-4 py-1.5'>
-                  <div className='afacad-bold text-sm'>{ localisedSetName[index] }</div>
-                </td>
-                <td className='px-4 py-1.5'>
-                  <div className='afacad-semi-bold text-sm'>{relic.level === "null" ? 0 : relic.level}</div>
-                </td>
-                <td className='px-4 py-1.5'>
-                  <div className='flex items-center'>
-                    <img src={statImageGetter(relic.mainType)} alt="" className="w-6 h-6 mr-2" />
-                    {statValueGetter(relic.mainValue, relic.mainType)}
+    <div className='w-full flex flex-col gap-1'>
+
+      {/* header */}
+      <div className='flex items-center gap-3 px-3 py-1 text-white/25 afacad-light text-xs tracking-widest uppercase select-none'>
+        <div className='w-11 shrink-0' />
+        <div className='w-52 shrink-0'>Name</div>
+        <div className='w-10 text-center shrink-0'>Lvl</div>
+        <div className='w-44 shrink-0'>Main</div>
+        <div className='flex-1'>Substats</div>
+        <div className='w-14 shrink-0'>Rarity</div>
+      </div>
+
+      {/* rows */}
+      {info && info.map((record, index) => {
+        if (!record || record === "lastItem" || record === "error" || !record.relic) return null;
+        const relic = record.relic;
+        const metaArray = relic.tid ? metaArrayGetter(relic.tid) : [];
+
+        return (
+          <div key={index}
+            className='flex items-center gap-3 rounded-lg bg-gray-900/50 backdrop-blur-sm overflow-hidden hover:bg-gray-800/60 transition-colors'
+          >
+            {/* rarity accent bar */}
+            <div className={`w-1 self-stretch shrink-0 ${rarityBGColourGetter(metaArray)}`} />
+
+            {/* piece image + slot icon overlay */}
+            <div className='w-10 shrink-0 relative py-2'>
+              <img src={imageGetter(metaArray)} alt="" className="w-10 h-10 object-contain" />
+              <img src={relicIconGetter(metaArray)} alt="" className="absolute bottom-1.5 right-0 w-4 h-4 object-contain opacity-60 bg-black/40 rounded-full p-0.5" />
+            </div>
+
+            {/* name + set */}
+            <div className='w-52 shrink-0 min-w-0 py-2.5'>
+              <p className='text-white afacad-bold text-base leading-tight truncate'>
+                {localisedRelicName[index]}
+              </p>
+              <p className='text-white/40 afacad-light text-xs truncate mt-0.5'>
+                {localisedSetName[index]}
+              </p>
+            </div>
+
+            {/* level */}
+            <div className={`w-10 text-center afacad-bold text-sm shrink-0 ${rarityTextColourGetter(metaArray)}`}>
+              +{relic.level === "null" ? 0 : relic.level}
+            </div>
+
+            {/* main stat */}
+            <div className='w-44 shrink-0 flex items-center gap-2'>
+              <img src={statImageGetter(relic.mainType)} alt="" className="w-5 h-5 object-contain shrink-0" />
+              <span className='text-white/50 afacad-light text-sm whitespace-nowrap'>{statNameGetter(relic.mainType)}</span>
+              <span className='text-white afacad-bold text-sm whitespace-nowrap'>
+                {inlineStatValue(relic.mainValue, relic.mainType)}
+              </span>
+            </div>
+
+            {/* sub stats — 4 fixed chips, each capped so they don't bloat */}
+            <div className='flex-1 flex gap-2 py-2 pr-3'>
+              {Array.from({ length: 4 }).map((_, i) => {
+                const sub = relic.subAffixes[i];
+                return sub ? (
+                  <div key={i} className='flex items-center gap-1.5 bg-black/25 rounded-md px-2 py-1.5 w-[23%] min-w-0 shrink-0'>
+                    <img src={statImageGetter(sub.type)} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                    <span className='text-white/45 afacad-light text-xs whitespace-nowrap truncate flex-1'>
+                      {statNameGetter(sub.type)}
+                    </span>
+                    <span className='text-white afacad-semi-bold text-xs whitespace-nowrap'>
+                      {inlineStatValue(sub.value, sub.type)}
+                    </span>
                   </div>
-                </td>
-                <td className='px-4 py-1.5'>
-                  <div className='flex flex-wrap gap-1'>
-                    {relic.subAffixes.map((sub, subIndex) => (
-                      sub ? (
-                        <div key={subIndex} className='flex items-center bg-black/20 rounded px-1 py-0.5'>
-                          <img src={statImageGetter(sub.type)} alt="" className="w-4 h-4 mr-1" />
-                          {statValueGetter(sub.value, sub.type)}
-                        </div>
-                      ) : <div key={subIndex} className='text-gray-400 text-xs'>Empty</div>
-                    ))}
+                ) : (
+                  <div key={i} className='bg-gray-800/30 rounded-md w-[23%] shrink-0 flex items-center justify-center text-white/15 text-xs py-1.5'>
+                    —
                   </div>
-                </td>
-                <td className='px-4 py-1.5'>
-                  <div className={`flex items-center ${rarityTextColourGetter(metaArray)}`}>
-                    <div className='flex'>
-                      {Array.from({ length: parseInt(metaArray[0] - 1) }).map((_, i) => (
-                        <FaStar key={i} size={12} />
-                      ))}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                );
+              })}
+            </div>
+
+            {/* rarity stars */}
+            <div className={`w-14 shrink-0 flex gap-0.5 items-center pr-3 ${rarityTextColourGetter(metaArray)}`}>
+              {Array.from({ length: parseInt(metaArray[0]) - 1 }).map((_, i) => (
+                <FaStar key={i} size={10} />
+              ))}
+            </div>
+
+          </div>
+        );
+      })}
     </div>
   )
 }
