@@ -19,6 +19,7 @@ const defaults = {
     backgroundImageKey: 'backgrounds/tes',
     cardBackgroundImageKey: 'card_backgrounds/albedo',
     persistSettings: false,
+    themeKey: 'purple',
 };
 
 const saved = loadFromStorage();
@@ -38,12 +39,16 @@ const settingsSlice = createSlice({
         setCardBackgroundImage: (state, action) => {
             state.cardBackgroundImageKey = action.payload;
         },
+        setTheme: (state, action) => {
+            state.themeKey = action.payload;
+        },
     },
 });
 
-export const { toggleSetting, setBackgroundImage, setCardBackgroundImage } = settingsSlice.actions;
+export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme } = settingsSlice.actions;
 export const selectSettings = (state) => state.settings;
 export const selectRelicAnimations = (state) => state.settings.relicAnimations;
 export const selectBackgroundImageKey = (state) => state.settings.backgroundImageKey;
 export const selectCardBackgroundImageKey = (state) => state.settings.cardBackgroundImageKey;
+export const selectThemeKey = (state) => state.settings.themeKey;
 export default settingsSlice.reducer;

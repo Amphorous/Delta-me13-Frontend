@@ -5,6 +5,7 @@ import Footer from './Footer'
 import { useSelector } from 'react-redux'
 import { selectBackgroundImageKey } from '../../store/settingsSlice'
 import { backgroundImages } from '../../assets/backgroundImages'
+import ThemeManager from '../ThemeManager'
 
 function RootLayout() {
   const backgroundImageKey = useSelector(selectBackgroundImageKey);
@@ -12,6 +13,7 @@ function RootLayout() {
 
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden bg-black">
+      <ThemeManager />
 
       <div
         className="absolute inset-0 z-0 bg-cover bg-center blur-[3px]"

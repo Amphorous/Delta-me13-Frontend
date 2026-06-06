@@ -24,12 +24,12 @@ function Header() {
 
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full flex flex-col relative z-50">
       <div className="bg-gradient-to-b from-black to-transparent text-white h-[10vh] min-h-[56px] flex justify-between">
         <div className="flex items-center">
           <Link to="/home">
             <div className="afacad-bold pl-6 md:pl-9" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
-              Re<span className="text-violet-500">:</span>muria
+              Re<span className="text-[var(--accent-solid)]">:</span>muria
             </div>
           </Link>
 

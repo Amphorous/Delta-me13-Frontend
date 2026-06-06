@@ -6,6 +6,47 @@
 @import "tailwindcss";
 @plugin 'tailwind-scrollbar';
 
+/* ── Accent theme CSS variables ───────────────────────────────────────────────
+   ThemeManager.jsx sets these on :root at runtime based on the active theme.
+   Defaults here are the purple theme so there's no flash on first paint.
+   Never use raw Tailwind purple/violet colour utilities for interactive/brand
+   elements — always use var(--accent-*) so themes propagate automatically.
+   ──────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Solid accent — for toggle backgrounds, dot indicators, solid fills */
+  --accent-solid: #8b5cf6;
+  /* Lighter accent — for borders, muted text, icons */
+  --accent-muted: #a78bfa;
+  /* Very light accent — for text on accent-coloured surfaces */
+  --accent-text: #f3e8ff;
+  /* Semi-transparent solid — for the Re:muria brand colon */
+  --accent-colon: rgb(139 92 246 / 0.5);
+  /* Focus ring */
+  --accent-ring: #8b5cf6;
+  /* Pre-computed rgba backgrounds */
+  --accent-bg-20: rgb(139 92 246 / 0.2);
+  --accent-bg-30: rgb(139 92 246 / 0.3);
+  --accent-bg-40: rgb(139 92 246 / 0.4);
+  --accent-bg-60: rgb(139 92 246 / 0.6);
+  /* Pre-computed rgba borders (based on lighter muted colour) */
+  --accent-border-30: rgb(167 139 250 / 0.3);
+  --accent-border-60: rgb(167 139 250 / 0.6);
+  /* Very faint accent tinge for glass panels (used via inset box-shadow below) */
+  --accent-glass: rgb(139 92 246 / 0.12);
+  /* Dim muted — for subtle themed text */
+  --accent-dim: rgb(167 139 250 / 0.35);
+}
+
+/* ── Subtle accent tinge on all frosted-glass panels ──────────────────────────
+   Applies a near-invisible inset box-shadow in the accent colour over every
+   element that carries a backdrop-blur class. Inset box-shadow sits above
+   background-color but below content, so it never obscures text or images.
+   The ThemeManager updates --accent-glass when the theme changes.
+   ──────────────────────────────────────────────────────────────────────────── */
+[class*="backdrop-blur"] {
+  box-shadow: inset 0 0 0 9999px var(--accent-glass);
+}
+
   .afacad-bold {
     font-family: "Afacad", sans-serif;
     font-optical-sizing: auto;

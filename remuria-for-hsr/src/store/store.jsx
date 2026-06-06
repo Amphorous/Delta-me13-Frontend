@@ -4,6 +4,7 @@ import focusedUserReducer from './userCardSlice';
 import authReducer from './authSlice';
 import localisationReducer from './localisationSlice';
 import settingsReducer from './settingsSlice';
+import bindingsReducer from './bindingsSlice';
 
 const SETTINGS_STORAGE_KEY = 're:muria:settings';
 
@@ -14,6 +15,7 @@ const store = configureStore({
     auth: authReducer,
     localisation: localisationReducer,
     settings: settingsReducer,
+    bindings: bindingsReducer,
   }
 });
 

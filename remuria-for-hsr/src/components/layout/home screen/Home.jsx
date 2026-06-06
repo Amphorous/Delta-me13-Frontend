@@ -91,7 +91,7 @@ function Home() {
   return (
     <div className='flex-1 mx-5 flex justify-around items-center'>
 
-      <div className="flex flex-col searchbar h-[73%] aspect-[4.2/6] max-h-[65vh] min-w-[300px] max-w-[380px] min-h-[480px] shrink-0">
+      <div className="flex flex-col searchbar h-[73%] aspect-[4.2/6] max-h-[65vh] min-w-[360px] max-w-[480px] min-h-[480px] shrink-0">
         
         <form onSubmit={handleSubmit(submitHandler)}
           className=' h-[10%] mb-[2%] text-[120%] flex items-center relative justify-end' 
@@ -112,8 +112,8 @@ function Home() {
                 /^\d+$/.test(value) || "Only numbers allowed"
             })}
             className="border border-[#B2B2B2]/40 bg-gray-800/40 backdrop-blur-md rounded-full
-                      w-full py-[3%] px-[5%] text-[#ebebeb] focus:outline-none focus:ring-2
-                      focus:ring-purple-500 focus:border-transparent transition absolute z-0"
+                      w-full py-[3%] px-[5%] text-[#ebebeb] afacad-light focus:outline-none focus:ring-2
+                      focus:ring-[var(--accent-ring)] focus:border-transparent transition absolute z-0"
           />
 
 
@@ -206,7 +206,7 @@ function Home() {
                   Welcome to
                 </p>
                 <p className="afacad-bold text-9xl text-white mt-[-1.5rem]">
-                  Re<span className='text-purple-500'>:</span>muria
+                  Re<span className='text-[var(--accent-solid)]'>:</span>muria
                 </p>
               </div>
             </div>

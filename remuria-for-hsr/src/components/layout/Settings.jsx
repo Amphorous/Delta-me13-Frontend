@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDown } from 'react-icons/io';
-import { toggleSetting, setBackgroundImage, setCardBackgroundImage, selectSettings } from '../../store/settingsSlice';
+import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, selectSettings, selectThemeKey } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
+import { selectLoc, setLoc } from '../../store/localisationSlice';
 
 // ─── primitives ──────────────────────────────────────────────────────────────
 
 function Toggle({ on }) {
     return (
         <div className={`relative w-12 h-6 rounded-full transition-colors duration-200 shrink-0
-            ${on ? 'bg-violet-500' : 'bg-gray-600'}`}>
+            ${on ? 'bg-[var(--accent-solid)]' : 'bg-gray-600'}`}>
             <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
                 ${on ? 'translate-x-[1.625rem]' : 'translate-x-0.5'}`} />
         </div>
@@ -29,7 +31,7 @@ function SettingsRow({ label, description, settingKey }) {
             <div className='flex flex-col min-w-0 pr-6'>
                 <p className='text-white afacad-semi-bold text-sm'>{label}</p>
                 {description && (
-                    <p className='text-white/35 afacad-light text-xs mt-0.5'>{description}</p>
+                    <p className='text-white/55 afacad-light text-xs mt-0.5'>{description}</p>
                 )}
             </div>
             <Toggle on={!!value} />
@@ -46,7 +48,7 @@ function Section({ title, children }) {
             transition={{ duration: 0.2 }}
         >
             <div className='flex items-center gap-3 mb-2 px-1'>
-                <span className='text-white/30 afacad-bold text-[10px] tracking-[0.35em] uppercase select-none'>
+                <span className='text-white/55 afacad-bold text-[10px] tracking-[0.35em] uppercase select-none'>
                     {title}
                 </span>
                 <div className='flex-1 h-px bg-white/10' />
@@ -104,7 +106,7 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                                             onClick={() => onSelect(bg.key)}
                                             className={`relative rounded-xl overflow-hidden cursor-pointer w-32 h-20 shrink-0 transition-all duration-200
                                                 ${isActive
-                                                    ? 'ring-2 ring-violet-500 scale-[1.03]'
+                                                    ? 'ring-2 ring-[var(--accent-solid)] scale-[1.03]'
                                                     : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-[1.02]'
                                                 }`}
                                         >
@@ -113,7 +115,7 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                                                 <span className='text-white afacad-light text-[10px] truncate'>{bg.filename}</span>
                                             </div>
                                             {isActive && (
-                                                <div className='absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center'>
+                                                <div className='absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[var(--accent-solid)] flex items-center justify-center'>
                                                     <div className='w-1.5 h-1.5 rounded-full bg-white' />
                                                 </div>
                                             )}
@@ -153,6 +155,173 @@ function CardBackgroundSelector() {
     );
 }
 
+// ─── theme selector ───────────────────────────────────────────────────────────
+
+const THEME_OPTIONS = [
+    {
+        key: 'purple',
+        label: 'Purple',
+        swatch: 'bg-violet-500',
+    },
+    {
+        key: 'red',
+        label: 'Red',
+        swatch: 'bg-rose-500',
+    },
+    {
+        key: 'green',
+        label: 'Green',
+        swatch: 'bg-emerald-500',
+    },
+    {
+        key: 'adaptive',
+        label: 'Adaptive',
+        swatch: null, // rendered as gradient
+    },
+];
+
+function ThemeSelector() {
+    const dispatch = useDispatch();
+    const themeKey = useSelector(selectThemeKey);
+
+    return (
+        <div className='flex gap-2 px-4 py-3 flex-wrap'>
+            {THEME_OPTIONS.map(({ key, label, swatch }) => {
+                const active = themeKey === key;
+                return (
+                    <button
+                        key={key}
+                        onClick={() => dispatch(setTheme(key))}
+                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl transition-all cursor-pointer select-none
+                            ${active ? 'bg-white/10 ring-1 ring-white/30' : 'hover:bg-white/5'}`}
+                    >
+                        {swatch ? (
+                            <div className={`w-7 h-7 rounded-full ${swatch} ${active ? 'ring-2 ring-white/70 ring-offset-1 ring-offset-transparent' : ''}`} />
+                        ) : (
+                            <div className={`w-7 h-7 rounded-full ${active ? 'ring-2 ring-white/70 ring-offset-1 ring-offset-transparent' : ''}`}
+                                style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #f43f5e 50%, #10b981 100%)' }}
+                            />
+                        )}
+                        <p className={`afacad-light text-xs ${active ? 'text-white' : 'text-white/50'}`}>{label}</p>
+                    </button>
+                );
+            })}
+            {themeKey === 'adaptive' && (
+                <p className='w-full afacad-light text-white/50 text-xs px-1 mt-0.5'>
+                    Adaptive samples the background image to generate a matching accent colour.
+                </p>
+            )}
+        </div>
+    );
+}
+
+// ─── tooltip ─────────────────────────────────────────────────────────────────
+
+function Tooltip({ text, children }) {
+    const [show, setShow] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0 });
+    const ref = useRef(null);
+
+    function updatePos() {
+        if (ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            setPos({ top: rect.top - 6, left: rect.left + rect.width / 2 });
+        }
+    }
+
+    return (
+        <div ref={ref} onMouseEnter={() => { updatePos(); setShow(true); }} onMouseLeave={() => setShow(false)}>
+            {children}
+            {show && createPortal(
+                <div
+                    className='fixed -translate-x-1/2 -translate-y-full pointer-events-none z-50 px-2.5 py-1 bg-gray-800 border border-white/10 rounded-md afacad-light text-white text-xs whitespace-nowrap'
+                    style={{ top: pos.top, left: pos.left }}
+                >
+                    {text}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
+
+// ─── language selector ────────────────────────────────────────────────────────
+
+const ALL_KNOWN_LOCS = ["en", "cn", "tw", "de", "es", "fr", "id", "jp", "kr", "pt", "ru", "th", "vi"];
+
+const LOC_LABELS = {
+    en: "English",
+    cn: "Chinese (Simplified)",
+    tw: "Chinese (Traditional) / Taiwanese",
+    de: "German",
+    es: "Spanish",
+    fr: "French",
+    id: "Indonesian",
+    jp: "Japanese",
+    kr: "Korean",
+    pt: "Portuguese",
+    ru: "Russian",
+    th: "Thai",
+    vi: "Vietnamese",
+};
+
+function LanguageSelector() {
+    const dispatch = useDispatch();
+    const selectedLoc = useSelector(selectLoc);
+
+    const [allLocs, setAllLocs] = useState(
+        ALL_KNOWN_LOCS.map(lang => ({ [lang]: lang === "en" }))
+    );
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_TRANSLATION_API_URL}/hsr/localization/getlist`)
+            .then(res => {
+                if (!res.ok) throw new Error();
+                return res.json();
+            })
+            .then(data => {
+                const available = new Set(data.map(obj => Object.keys(obj)[0]));
+                const merged = [...ALL_KNOWN_LOCS];
+                available.forEach(lang => { if (!merged.includes(lang)) merged.push(lang); });
+                setAllLocs(merged.map(lang => ({ [lang]: available.has(lang) })));
+            })
+            .catch(() => {
+                setAllLocs(ALL_KNOWN_LOCS.map(lang => ({ [lang]: lang === "en" })));
+            });
+    }, []);
+
+    return (
+        <div className='flex gap-2 px-4 py-3 flex-wrap'>
+            {allLocs.map((locObj, index) => {
+                const locKey = Object.keys(locObj)[0];
+                const available = locObj[locKey];
+                const active = locKey === selectedLoc;
+                const label = LOC_LABELS[locKey] ?? locKey;
+                const tooltipText = available ? label : `${label} — unavailable`;
+                return (
+                    <Tooltip key={index} text={tooltipText}>
+                        <button
+                            onClick={() => {
+                                if (available) dispatch(setLoc(locKey));
+                                else alert("This language is not currently available, stay tuned for future updates!");
+                            }}
+                            className={`px-3 py-1.5 rounded-lg afacad-semi-bold text-xs transition-all cursor-pointer select-none
+                                ${active
+                                    ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-60)] text-white'
+                                    : available
+                                        ? 'hover:bg-white/5 text-white/70 hover:text-white'
+                                        : 'text-white/25 cursor-not-allowed'
+                                }`}
+                        >
+                            {locKey.toUpperCase()}
+                        </button>
+                    </Tooltip>
+                );
+            })}
+        </div>
+    );
+}
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 function Settings() {
@@ -162,9 +331,17 @@ function Settings() {
             <p className='libre-baskerville-bold text-white mb-1' style={{ fontSize: 'clamp(1.8rem, 3vw, 2.5rem)' }}>
                 Settings
             </p>
-            <p className='afacad-light text-white/30 text-sm mb-8'>
-                Re<span className='text-violet-500/70'>:</span>muria preferences
+            <p className='afacad-light text-white/50 text-sm mb-8'>
+                Re<span className='text-[var(--accent-colon)]'>:</span>muria preferences
             </p>
+
+            <Section title="Theme">
+                <ThemeSelector />
+            </Section>
+
+            <Section title="Localisation">
+                <LanguageSelector />
+            </Section>
 
             <Section title="Relic">
                 <SettingsRow

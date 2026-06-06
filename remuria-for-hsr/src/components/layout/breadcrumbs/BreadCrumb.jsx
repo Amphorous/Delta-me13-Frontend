@@ -20,7 +20,7 @@ function BreadCrumb() {
         <span key={idx} className='flex'>
           {!crumb.isLast ? (
             <>
-              <Link to={crumb.path} className="text-purple-400 hover:bg-gray-400/15 p-1.5 rounded-sm transition cursor-pointer">
+              <Link to={crumb.path} className="text-[var(--accent-muted)] hover:bg-gray-400/15 p-1.5 rounded-sm transition cursor-pointer">
                 {crumb.label}
               </Link>
               <div className='mt-2.5'>
