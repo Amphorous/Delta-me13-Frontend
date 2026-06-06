@@ -1,4 +1,5 @@
-import React, { use, useEffect, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CiStar } from "react-icons/ci";
 import { FaStar } from "react-icons/fa";
@@ -29,10 +30,63 @@ import iconWindAddedRatio from "../../../../assets/downloaded_icons/IconWindAdde
 import iconSPRatio from "../../../../assets/downloaded_icons/IconSPRatio.png"
 import { useSelector } from "react-redux";
 import { selectLoc } from '../../../../store/localisationSlice';
-import { selectRelicAnimations } from '../../../../store/settingsSlice';
+import { selectRelicAnimations, selectRelicShowCV } from '../../../../store/settingsSlice';
 import axios from 'axios';
 
-function RelicItem({info, relicIndex}) {
+function statNameGetter(statType) {
+    if (!statType) return '';
+    const t = statType.toLowerCase();
+    if (t.includes("criticaldamage"))      return "CRIT DMG";
+    if (t.includes("criticalchance"))      return "CRIT Rate";
+    if (t.includes("attack"))              return "ATK";
+    if (t.includes("break"))              return "Break Effect";
+    if (t.includes("defence"))            return "DEF";
+    if (t.includes("fireaddedratio"))     return "Fire DMG";
+    if (t.includes("iceaddedratio"))      return "Ice DMG";
+    if (t.includes("imaginaryaddedratio")) return "Imaginary DMG";
+    if (t.includes("heal"))              return "Healing Boost";
+    if (t.includes("joy"))               return "Elation DMG";
+    if (t.includes("hp"))               return "HP";
+    if (t.includes("physicaladdedratio")) return "Physical DMG";
+    if (t.includes("quantumaddedratio")) return "Quantum DMG";
+    if (t.includes("speed"))            return "SPD";
+    if (t.includes("statusprobability")) return "Eff. Hit Rate";
+    if (t.includes("statusresistance")) return "Eff. RES";
+    if (t.includes("thunderaddedratio")) return "Lightning DMG";
+    if (t.includes("windaddedratio"))   return "Wind DMG";
+    if (t.includes("sp"))              return "Energy Regen";
+    return statType;
+}
+
+function calcCV(relic) {
+    if (!relic?.subAffixes) return 0;
+    let critRate = 0, critDmg = 0;
+    relic.subAffixes.forEach(sub => {
+        if (!sub) return;
+        const t = sub.type.toLowerCase();
+        if (t.includes('criticalchance')) critRate = sub.value * 100;
+        if (t.includes('criticaldamage')) critDmg = sub.value * 100;
+    });
+    return 2 * critRate + critDmg;
+}
+
+function cvBadgeBg(cv) {
+    if (cv >= 40) return 'bg-red-950/95';
+    if (cv >= 30) return 'bg-cyan-950/95';
+    if (cv >= 20) return 'bg-amber-950/95';
+    if (cv >= 15) return 'bg-purple-950/95';
+    return 'bg-blue-950/95';
+}
+
+function cvBadgeText(cv) {
+    if (cv >= 40) return 'text-red-300';
+    if (cv >= 30) return 'text-cyan-300';
+    if (cv >= 20) return 'text-amber-300';
+    if (cv >= 15) return 'text-purple-300';
+    return 'text-blue-300';
+}
+
+function RelicItem({info, relicIndex, onStatClick, sortBy}) {
     //meta info has [ rarity+1, setId, position/type ] (this is basically segmenting the tid into 3 parts)
 
     // make sure to have a state function which gives an option to show relics in a list (compact) or a detailed format
@@ -40,6 +94,39 @@ function RelicItem({info, relicIndex}) {
     const [relicMetaInfo, setRelicMetaInfo] = useState(null)
     const [hoveredRelicRarity, setHoveredRelicRarity] = useState(false);
     const relicAnimations = useSelector(selectRelicAnimations);
+    const showCV = useSelector(selectRelicShowCV);
+    const cv = calcCV(info?.relic);
+
+    const [showBuilds, setShowBuilds] = useState(false);
+    const [buildsPos, setBuildsPos] = useState({ top: 0, left: 0 });
+    const buildsIconRef = useRef(null);
+
+    function handleBuildsHover(show) {
+        if (show && buildsIconRef.current) {
+            const rect = buildsIconRef.current.getBoundingClientRect();
+            setBuildsPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
+        }
+        setShowBuilds(show);
+    }
+
+    const [showCVTooltip, setShowCVTooltip] = useState(false);
+    const [cvTooltipPos, setCVTooltipPos] = useState({ top: 0, left: 0 });
+    const cvBadgeRef = useRef(null);
+
+    function handleCVHover(show) {
+        if (show && cvBadgeRef.current) {
+            const rect = cvBadgeRef.current.getBoundingClientRect();
+            setCVTooltipPos({ top: rect.bottom + 5, left: rect.left + rect.width / 2 });
+        }
+        setShowCVTooltip(show);
+    }
+
+    const [hoveredStat, setHoveredStat] = useState(null);
+
+    function showStatTooltip(e, statType) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setHoveredStat({ label: statNameGetter(statType), top: rect.bottom + 5, left: rect.left + rect.width / 2 });
+    }
 
     const [localisedRelicName, setLocalisedRelicName] = useState(null);
     const [localisedSetName, setLocalisedSetName] = useState(null);
@@ -186,12 +273,74 @@ function RelicItem({info, relicIndex}) {
         <div className={`rounded-md border-1 ${rarityColourGetter()} shadow-md shadow-black/50 overflow-hidden flex w-full h-full p-1 min-w-1/2 bg-gray-800/40 backdrop-blur-md`}>
 
             <div className="relative h-full w-full mr-1 flex">
-               <div className='h-full w-1/3 bg-gray-700/40 rounded-md mr-1 flex flex-col items-center justify-center'>
+               <div className='h-full w-1/3 bg-gray-700/40 rounded-md mr-1 flex flex-col items-center justify-center relative'>
                     {/* image section */}
-                    <img src={imageGetter()} alt="" className="aspect-square h-full w-full object-contain " />
+                    <img src={imageGetter()} alt="" className="aspect-square h-full w-full object-contain" />
+                    {/* CV badge — absolute top-left */}
+                    {showCV && (
+                        <div
+                            ref={cvBadgeRef}
+                            className={`absolute top-1 left-1 z-10 flex flex-col items-center rounded px-1.5 py-0.5 cursor-pointer transition ${cvBadgeBg(cv)} ${sortBy === 'CV' ? 'ring-2 ring-white/50' : ''}`}
+                            onClick={() => onStatClick?.('CV')}
+                            onMouseEnter={() => handleCVHover(true)}
+                            onMouseLeave={() => handleCVHover(false)}
+                        >
+                            <span className={`afacad-bold text-[10px] leading-none ${cvBadgeText(cv)}`}>{cv.toFixed(1)}</span>
+                        </div>
+                    )}
+                    {showCVTooltip && createPortal(
+                        <div
+                            className='fixed z-50 pointer-events-none -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-lg px-2.5 py-1.5'
+                            style={{ top: cvTooltipPos.top, left: cvTooltipPos.left }}
+                        >
+                            <span className='text-white/60 afacad-light text-xs whitespace-nowrap'>
+                                <span className='text-white afacad-bold'>{cv.toFixed(1)}</span> CV
+                            </span>
+                        </div>,
+                        document.body
+                    )}
+                    {hoveredStat && createPortal(
+                        <div
+                            className='fixed z-50 pointer-events-none -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-lg px-2.5 py-1.5'
+                            style={{ top: hoveredStat.top, left: hoveredStat.left }}
+                        >
+                            <span className='text-white/70 afacad-light text-xs whitespace-nowrap'>{hoveredStat.label}</span>
+                        </div>,
+                        document.body
+                    )}
                     <div className='bg-blfack w-full flex justify-evenly text-white m-2'>
                         <img src={relicIconGetter()} alt="" className="aspect-square h-4.5 object-contain rounded-full " />
-                        <LuUsersRound className='hover:mix-blend-overlay transition'/>
+                        <div
+                            ref={buildsIconRef}
+                            className={`transition cursor-pointer ${info?.builds?.length ? 'hover:text-[var(--accent-muted)]' : 'opacity-30 cursor-default'}`}
+                            onMouseEnter={() => info?.builds?.length && handleBuildsHover(true)}
+                            onMouseLeave={() => handleBuildsHover(false)}
+                        >
+                            <LuUsersRound />
+                        </div>
+                        {showBuilds && info?.builds?.length > 0 && createPortal(
+                            <div
+                                className='fixed z-50 pointer-events-none -translate-x-1/2 flex flex-col gap-1.5 p-2.5 bg-gray-900/90 backdrop-blur-sm border border-white/10 rounded-xl min-w-max'
+                                style={{ top: buildsPos.top, left: buildsPos.left }}
+                            >
+                                {info.builds.map((build, i) => {
+                                    const avatarId = build.avatarId ?? build.avatar_id ?? build;
+                                    const name = build.name ?? build.buildName ?? null;
+                                    return (
+                                        <div key={i} className='flex items-center gap-2'>
+                                            <img
+                                                src={`https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/Avatar/${avatarId}.png`}
+                                                alt=""
+                                                className='w-7 h-7 rounded-full border border-white/20 object-cover shrink-0'
+                                                onError={e => { e.currentTarget.style.display = 'none'; }}
+                                            />
+                                            {name && <span className='text-white/75 afacad-light text-xs'>{name}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>,
+                            document.body
+                        )}
                     </div>
                </div>
                <div className='h-full w-2/3 flex flex-col'>
@@ -216,7 +365,12 @@ function RelicItem({info, relicIndex}) {
                             {/* main stat */}
 
                             <div className='h-[5%] text-center text-white afacad-bold text-sm my-1'>+{`${(info.relic.level === "null" ? 0 : info.relic.level)}`}</div>
-                            <div className='h-full w-full mt-1 flex flex-col items-center justify-center'>
+                            <div
+                                className={`h-full w-full mt-1 flex flex-col items-center justify-center rounded-md transition cursor-pointer hover:bg-white/5 ${sortBy === info.relic.mainType ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : ''}`}
+                                onClick={() => onStatClick?.(info.relic.mainType)}
+                                onMouseEnter={e => showStatTooltip(e, info.relic.mainType)}
+                                onMouseLeave={() => setHoveredStat(null)}
+                            >
                                 <img src={`${statImageGetter(info.relic.mainType)}`} alt=";(" className="aspect-square w-1/2 mb-3 object-contain " />
                                 {statValueGetter(info.relic.mainValue, info.relic.mainType)}
                             </div>
@@ -231,7 +385,12 @@ function RelicItem({info, relicIndex}) {
                                     <div key={index} className='h-[22%] w-full m-1'>
                                         {sub ?
                                         <>
-                                            <div className='w-full bg-black/20 rounded-md h-full flex items-center'>
+                                            <div
+                                                className={`w-full bg-black/20 rounded-md h-full flex items-center cursor-pointer transition hover:bg-white/10 ${sortBy === sub.type ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : ''}`}
+                                                onClick={() => onStatClick?.(sub.type)}
+                                                onMouseEnter={e => showStatTooltip(e, sub.type)}
+                                                onMouseLeave={() => setHoveredStat(null)}
+                                            >
                                                 <img src={`${statImageGetter(sub.type)}`} alt=";(" className="aspect-square h-1/2 object-contain mx-3" />
                                                 {statValueGetter(sub.value, sub.type)}
                                             </div>
