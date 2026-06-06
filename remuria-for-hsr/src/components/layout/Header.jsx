@@ -12,6 +12,23 @@ function Header() {
   const testRef = useRef(null);
   const [testWidth, setTestWidth] = useState(0);
 
+  const hoverTimeout = useRef(null);
+
+  const delayedSetHovered = (value, seconds) => {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+    }
+
+    if (value) {
+      setHovered(true);
+      return;
+    }
+
+    hoverTimeout.current = setTimeout(() => {
+      setHovered(false);
+    }, seconds * 1000);
+  };
+
   const focusedUserDetailsTestInHEader = useSelector( state => state.focusedUser );
   useEffect(()=>{console.log("Header reads the focusedUser as: ",focusedUserDetailsTestInHEader)}, [focusedUserDetailsTestInHEader])
 
@@ -40,8 +57,8 @@ function Header() {
 
         <div className="flex mr-6.5">
           <div
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            onMouseEnter={() => delayedSetHovered(true, 0)}
+            onMouseLeave={() => delayedSetHovered(false, 0.5)}
             className="self-center border border-[#B2B2B2]/40 bg-gray-800/40 backdrop-blur-md rounded-full overflow-hidden py-2 px-4 ml-3 flex items-center min-h-[3rem] afacad-light"
           >
             <motion.div

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDown } from 'react-icons/io';
-import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, selectSettings, selectThemeKey } from '../../store/settingsSlice';
+import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setSettingsWidth, selectSettings, selectThemeKey, selectSettingsWidth } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 import { selectLoc, setLoc } from '../../store/localisationSlice';
 
@@ -97,7 +97,7 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                         className='overflow-hidden'
                     >
                         <div className='px-4 pb-4 pt-4'>
-                            <div className='flex flex-wrap gap-3 p-1 max-h-[180px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+                            <div className='flex flex-wrap gap-3 p-1 max-h-[180px] overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/35'>
                                 {images.map((bg) => {
                                     const isActive = bg.key === activeKey;
                                     return (
@@ -322,51 +322,115 @@ function LanguageSelector() {
     );
 }
 
+// ─── settings width selector ─────────────────────────────────────────────────
+
+const WIDTH_OPTIONS = [
+    { key: 'sm', label: 'Small' },
+    { key: 'md', label: 'Medium' },
+    { key: 'lg', label: 'Large' },
+];
+
+export const WIDTH_CLASSES = {
+    sm: 'max-w-2xl',
+    md: 'max-w-7xl',
+    lg: 'max-w-none',
+};
+
+function SettingsWidthSelector() {
+    const dispatch = useDispatch();
+    const widthKey = useSelector(selectSettingsWidth);
+
+    return (
+        <div className='flex gap-2 px-4 py-3'>
+            {WIDTH_OPTIONS.map(({ key, label }) => {
+                const active = widthKey === key;
+                return (
+                    <button
+                        key={key}
+                        onClick={() => dispatch(setSettingsWidth(key))}
+                        className={`px-4 py-2 rounded-lg afacad-semi-bold text-xs transition-all cursor-pointer select-none
+                            ${active
+                                ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-60)] text-white'
+                                : 'hover:bg-white/5 text-white/70 hover:text-white'
+                            }`}
+                    >
+                        {label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 function Settings() {
+    const widthKey = useSelector(selectSettingsWidth);
+    const cardMaxW = WIDTH_CLASSES[widthKey] ?? WIDTH_CLASSES.sm;
+
     return (
-        <div className='w-full h-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-8 py-6'>
+        <div className='w-full h-full overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/35 flex justify-center p-6'>
+            <div className={`w-full ${cardMaxW} self-start bg-gray-900/60 backdrop-blur-md border border-white/10 rounded-2xl px-8 py-6 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/35`}>
 
-            <p className='libre-baskerville-bold text-white mb-1' style={{ fontSize: 'clamp(1.8rem, 3vw, 2.5rem)' }}>
-                Settings
-            </p>
-            <p className='afacad-light text-white/50 text-sm mb-8'>
-                Re<span className='text-[var(--accent-colon)]'>:</span>muria preferences
-            </p>
+                <p className='libre-baskerville-bold text-white mb-1' style={{ fontSize: 'clamp(1.8rem, 3vw, 2.5rem)' }}>
+                    Settings
+                </p>
+                <p className='afacad-light text-white/50 text-sm mb-8'>
+                    Re<span className='text-[var(--accent-colon)]'>:</span>muria preferences
+                </p>
 
-            <Section title="Theme">
-                <ThemeSelector />
-            </Section>
+                <Section title="Theme">
+                    <ThemeSelector />
+                </Section>
 
-            <Section title="Localisation">
-                <LanguageSelector />
-            </Section>
+                <Section title="Localisation">
+                    <LanguageSelector />
+                </Section>
 
-            <Section title="Relic">
-                <SettingsRow
-                    settingKey="relicAnimations"
-                    label="Relic Rarity on Hover"
-                    description="When on, the rarity sidebar on relic cards animates in on hover. When off, it is always visible."
-                />
-            </Section>
+                <Section title="Relic">
+                    <SettingsRow
+                        settingKey="relicAnimations"
+                        label="Relic Rarity on Hover"
+                        description="When on, the rarity sidebar on relic cards animates in on hover. When off, it is always visible."
+                    />
+                    <SettingsRow
+                        settingKey="relicTwoColumn"
+                        label="Two Column List"
+                        description="Display the relic list in two side-by-side columns."
+                    />
+                    <SettingsRow
+                        settingKey="relicShowCV"
+                        label="Show CV"
+                        description="Show a Crit Value column (2× Crit Rate + Crit DMG) with colour-coded thresholds."
+                    />
+                    <SettingsRow
+                        settingKey="relicCVShimmer"
+                        label="CV Shimmer"
+                        description="Animate the top two CV tiers with a shimmer gradient. Off shows solid colour instead."
+                    />
+                </Section>
 
-            <Section title="Background">
-                <BackgroundSelector />
-            </Section>
+                <Section title="Background">
+                    <BackgroundSelector />
+                </Section>
 
-            <Section title="Card Background">
-                <CardBackgroundSelector />
-            </Section>
+                <Section title="Card Background">
+                    <CardBackgroundSelector />
+                </Section>
 
-            <Section title="Data">
-                <SettingsRow
-                    settingKey="persistSettings"
-                    label="Persist Settings"
-                    description="Save your settings to local storage so they are restored on the next visit. Turning this off clears any saved settings immediately."
-                />
-            </Section>
+                <Section title="Panel">
+                    <SettingsWidthSelector />
+                </Section>
 
+                <Section title="Data">
+                    <SettingsRow
+                        settingKey="persistSettings"
+                        label="Persist Settings"
+                        description="Save your settings to local storage so they are restored on the next visit. Turning this off clears any saved settings immediately."
+                    />
+                </Section>
+
+            </div>
         </div>
     );
 }
