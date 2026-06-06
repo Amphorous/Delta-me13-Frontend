@@ -5,27 +5,35 @@ import { BsTranslate } from "react-icons/bs";
 import { useSelector, useDispatch } from "react-redux";
 import { selectLoc, setLoc } from '../../../store/localisationSlice';
 
+const ALL_KNOWN_LOCS = ["en", "cn", "tw", "de", "es", "fr", "id", "jp", "kr", "pt", "ru", "th", "vi"];
+
 function LanguageClickable() {
 
     const falsinator = false;
 
     const selectedLoc = useSelector(selectLoc);
     const dispatch = useDispatch();
-    const allLocs = [
-        {"en": true},
-        {"cn": false}, // if cn => zh-cn
-        {"tw": false}, // if tw => zh-tw
-        {"de": false},
-        {"es": false},
-        {"fr": false},
-        {"id": false},
-        {"ja": false},
-        {"ko": false},
-        {"pt": false},
-        {"ru": false},
-        {"th": false},
-        {"vi": false},
-    ]
+
+    const [allLocs, setAllLocs] = useState(
+        ALL_KNOWN_LOCS.map(lang => ({ [lang]: lang === "en" }))
+    );
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_TRANSLATION_API_URL}/hsr/localization/getlist`)
+            .then(res => {
+                if (!res.ok) throw new Error();
+                return res.json();
+            })
+            .then(data => {
+                const available = new Set(data.map(obj => Object.keys(obj)[0]));
+                const merged = [...ALL_KNOWN_LOCS];
+                available.forEach(lang => { if (!merged.includes(lang)) merged.push(lang); });
+                setAllLocs(merged.map(lang => ({ [lang]: available.has(lang) })));
+            })
+            .catch(() => {
+                setAllLocs(ALL_KNOWN_LOCS.map(lang => ({ [lang]: lang === "en" })));
+            });
+    }, []);
 
     const [showLocDropdown, setShowLocDropdown] = useState(false);
     const [positionReady, setPositionReady] = useState(false);
