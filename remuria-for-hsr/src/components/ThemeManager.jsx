@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { selectThemeKey, selectBackgroundImageKey } from '../store/settingsSlice';
-import { backgroundImages } from '../assets/backgroundImages';
+import { selectThemeKey, selectBackgroundImageKey, selectCardBackgroundImageKey, selectPillColorMode } from '../store/settingsSlice';
+import { backgroundImages, cardBackgroundImages } from '../assets/backgroundImages';
 import { FastAverageColor } from 'fast-average-color';
 import tinycolor from 'tinycolor2';
 
@@ -55,28 +55,31 @@ function buildVars({ solid, muted, text, colon }) {
   };
 }
 
-async function deriveAdaptivePalette(imageUrl) {
+async function deriveAccentColors(imageUrl) {
   const fac = new FastAverageColor();
+  const result = await fac.getColorAsync(imageUrl, { algorithm: 'dominant' });
+  const hsl = tinycolor(result.hex).toHsl();
+
+  // Ensure the extracted colour is vivid enough to use as an accent
+  if (hsl.s < 0.35) hsl.s = 0.55;
+  if (hsl.l < 0.38) hsl.l = 0.52;
+  if (hsl.l > 0.72) hsl.l = 0.60;
+
+  const base  = tinycolor(hsl);
+  const muted = tinycolor({ ...hsl, l: Math.min(hsl.l + 0.14, 0.8) });
+  const text  = tinycolor({ ...hsl, s: Math.max(hsl.s - 0.15, 0), l: Math.min(hsl.l + 0.36, 0.94) });
+
+  return {
+    solid: base.toHexString(),
+    muted: muted.toHexString(),
+    text:  text.toHexString(),
+  };
+}
+
+async function deriveAdaptivePalette(imageUrl) {
   try {
-    const result = await fac.getColorAsync(imageUrl, { algorithm: 'dominant' });
-    const hsl = tinycolor(result.hex).toHsl();
-
-    // Ensure the extracted colour is vivid enough to use as an accent
-    if (hsl.s < 0.35) hsl.s = 0.55;
-    if (hsl.l < 0.38) hsl.l = 0.52;
-    if (hsl.l > 0.72) hsl.l = 0.60;
-
-    const base   = tinycolor(hsl);
-    const muted  = tinycolor({ ...hsl, l: Math.min(hsl.l + 0.14, 0.8) });
-    const text   = tinycolor({ ...hsl, s: Math.max(hsl.s - 0.15, 0), l: Math.min(hsl.l + 0.36, 0.94) });
-    const solid  = base.toHexString();
-
-    return buildVars({
-      solid,
-      muted:  muted.toHexString(),
-      text:   text.toHexString(),
-      colon:  rgba(solid, 0.5),
-    });
+    const { solid, muted, text } = await deriveAccentColors(imageUrl);
+    return buildVars({ solid, muted, text, colon: rgba(solid, 0.5) });
   } catch {
     return buildVars(PALETTES.purple);
   }
@@ -92,6 +95,8 @@ function applyVars(vars) {
 export default function ThemeManager() {
   const themeKey        = useSelector(selectThemeKey);
   const bgKey           = useSelector(selectBackgroundImageKey);
+  const cardBgKey       = useSelector(selectCardBackgroundImageKey);
+  const pillColorMode   = useSelector(selectPillColorMode);
 
   useEffect(() => {
     if (themeKey !== 'adaptive') {
@@ -107,6 +112,23 @@ export default function ThemeManager() {
 
     deriveAdaptivePalette(bgImage.url).then(applyVars);
   }, [themeKey, bgKey]);
+
+  // Pill selector accent — only sampled from the card background when the
+  // "card" pill colour mode is active. "theme" reuses --accent-*, "bw" is
+  // handled entirely in Cursor/Tab with no CSS variables.
+  useEffect(() => {
+    if (pillColorMode !== 'card') return;
+
+    const cardImage = cardBackgroundImages.find(b => b.key === cardBgKey) ?? cardBackgroundImages[0];
+    if (!cardImage) {
+      applyVars(buildVars(PALETTES.purple));
+      return;
+    }
+
+    deriveAccentColors(cardImage.url)
+      .then(({ solid, text }) => applyVars({ '--pill-accent-solid': solid, '--pill-accent-text': text }))
+      .catch(() => applyVars({ '--pill-accent-solid': PALETTES.purple.solid, '--pill-accent-text': PALETTES.purple.text }));
+  }, [pillColorMode, cardBgKey]);
 
   return null;
 }

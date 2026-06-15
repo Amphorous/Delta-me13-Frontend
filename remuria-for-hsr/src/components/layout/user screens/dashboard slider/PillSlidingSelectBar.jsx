@@ -11,6 +11,7 @@ function PillSlidingSelectBar({uid, rightDisplaySelector, setRightDisplaySelecto
     })
 
     const [selectedTab, setSelectedTab] = useState(rightDisplaySelector)
+    const [hoveredTab, setHoveredTab] = useState("")
 
     useEffect(()=>{
       if(selectedTab !== ""){
@@ -26,12 +27,14 @@ function PillSlidingSelectBar({uid, rightDisplaySelector, setRightDisplaySelecto
           ...prev,
           opacity: 0,
         }))
+        setHoveredTab("")
       }
     }}
     className="relative py-1 px-1 w-fit border border-[#B2B2B2]/40 bg-gray-800/40 backdrop-blur-md rounded-full flex items-center">
-       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab}>relics</Tab>
-       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab}>builds</Tab>
-       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab}>validate</Tab>
+       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab} hoveredTab={hoveredTab} setHoveredTab={setHoveredTab}>home</Tab>
+       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab} hoveredTab={hoveredTab} setHoveredTab={setHoveredTab}>relics</Tab>
+       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab} hoveredTab={hoveredTab} setHoveredTab={setHoveredTab}>builds</Tab>
+       <Tab setPosition={setPosition} selectedTab={selectedTab} setSelectedTab={setSelectedTab} hoveredTab={hoveredTab} setHoveredTab={setHoveredTab}>validate</Tab>
        <Cursor position={position} selectedTab={selectedTab}/>
     </div>
   )

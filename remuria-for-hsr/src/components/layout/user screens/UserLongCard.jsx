@@ -10,8 +10,9 @@ import { IoMdRefresh } from "react-icons/io";
 import { motion, AnimatePresence } from 'framer-motion';
 import { addOrReplaceUser } from '../../../store/localUsersSlice';
 import { ImEyeBlocked } from "react-icons/im";
+import PillSlidingSelectBar from './dashboard slider/PillSlidingSelectBar';
 
-function UserLongCard({ uid }) {
+function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector }) {
 
     const localUsers = useSelector(state => state.localUsers);
     const focusedUser = useSelector(state => state.focusedUser);
@@ -29,11 +30,37 @@ function UserLongCard({ uid }) {
     const testRef = useRef(null);
     const [testWidth, setTestWidth] = useState(0);
 
+    const cardRef = useRef(null);
+    const dividerRef = useRef(null);
+    const [notchX, setNotchX] = useState(null);
+
     useLayoutEffect(() => {
         if (testRef.current) {
             setTestWidth(testRef.current.offsetWidth);
         }
     }, []);
+
+    // ticket-style notch — punched through the card's top/bottom edges, centered
+    // on the vertical divider's x position
+    useEffect(() => {
+        function updateNotch() {
+            if (!cardRef.current || !dividerRef.current) return;
+            const cardRect = cardRef.current.getBoundingClientRect();
+            const dividerRect = dividerRef.current.getBoundingClientRect();
+            setNotchX(dividerRect.left + dividerRect.width / 2 - cardRect.left);
+        }
+
+        updateNotch();
+
+        const ro = new ResizeObserver(updateNotch);
+        if (cardRef.current) ro.observe(cardRef.current);
+
+        window.addEventListener('resize', updateNotch);
+        return () => {
+            ro.disconnect();
+            window.removeEventListener('resize', updateNotch);
+        };
+    }, [focusedUser]);
 
     useEffect(() => {
         let focusedUserFromLS = localUsers.find(u => u.uid === uid);
@@ -136,19 +163,40 @@ function UserLongCard({ uid }) {
         return `${Math.floor(secs / 3600)}h ago`;
     }
 
+    const NOTCH_RADIUS = 5;
+    function buildNotchStyle(x, topY, bottomY) {
+        if (x === null) return undefined;
+        const maskImage = `radial-gradient(circle ${NOTCH_RADIUS}px at ${x}px ${topY}, transparent 99%, #000 100%), radial-gradient(circle ${NOTCH_RADIUS}px at ${x}px ${bottomY}, transparent 99%, #000 100%)`;
+        return {
+            WebkitMaskImage: maskImage,
+            maskImage,
+            WebkitMaskComposite: 'source-over, source-in',
+            maskComposite: 'intersect',
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+        };
+    }
+
+    // outer layers (bg image, overlay) share the card's own box — origin (0,0) at its top-left
+    const outerNotchStyle = buildNotchStyle(notchX, '0%', '100%');
+    // inner dashed frame is inset by mx-6 my-2 (24px / 8px), so shift the centers to match
+    const innerNotchStyle = notchX !== null ? buildNotchStyle(notchX - 24, '-8px', 'calc(100% + 8px)') : undefined;
+
     return (
         <motion.div
+            ref={cardRef}
             className="w-full relative rounded-2xl overflow-hidden"
+            style={outerNotchStyle}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
         >
             {/* background image */}
-            <img src={cardBgUrl} className="absolute inset-0 w-full h-full object-cover object-center -z-10 rounded-2xl" />
-            <div className="absolute inset-0 bg-gray-800/55 backdrop-blur-[3px] rounded-2xl" />
+            <img src={cardBgUrl} style={outerNotchStyle} className="absolute inset-0 w-full h-full object-cover object-center -z-10 rounded-2xl" />
+            <div style={outerNotchStyle} className="absolute inset-0 bg-gray-800/55 backdrop-blur-[3px] rounded-2xl" />
 
             {/* inner frame — dashed border matching UserCard identity */}
-            <div className="relative z-10 border-2 border-dashed border-white/30 mx-6 my-2 rounded-2xl flex items-center gap-5 px-7 py-5 min-h-[110px]">
+            <div style={innerNotchStyle} className="relative z-10 border-2 border-dashed border-white/30 mx-6 my-2 rounded-2xl flex items-center gap-5 px-7 py-5 min-h-[110px]">
 
                 {/* TL level — vertical left edge */}
                 <div className="text-white/70 vertical-lmao libre-baskerville-regular text-xs shrink-0 select-none">
@@ -210,8 +258,12 @@ function UserLongCard({ uid }) {
                     </div>
                 </div>
 
+                <div className='shrink-0 flex justify-center'>
+                    <PillSlidingSelectBar uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector}/>
+                </div>
+
                 {/* thin divider */}
-                <div className="self-stretch w-px bg-white/10 shrink-0" />
+                <div className="self-stretch w-px bg-white/10 shrink-0 " />
 
                 {/* last updated + refresh — centered column */}
                 <div className="flex flex-col items-center gap-2 shrink-0">
@@ -261,7 +313,7 @@ function UserLongCard({ uid }) {
                 </div>
 
                 {/* divider before title */}
-                <div className="self-stretch w-px bg-white/10 shrink-0" />
+                <div ref={dividerRef} className="self-stretch w-px bg-white/10 shrink-0" />
 
                 {/* "User Dashboard" title — right */}
                 <div className="flex flex-col items-end shrink-0 select-none pl-1">

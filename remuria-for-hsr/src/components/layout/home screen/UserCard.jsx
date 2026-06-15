@@ -14,6 +14,8 @@ import { IoIosArrowForward } from "react-icons/io";
 import { IoMdClose } from "react-icons/io";
 import { ImEyeBlocked } from "react-icons/im";
 
+const TL_CUTOUT_PADDING = 4;
+
 //showButtons is for enable/disabling the close & go to dashboard buttons
 function UserCard({uid, showButtons}) {
 
@@ -37,6 +39,10 @@ function UserCard({uid, showButtons}) {
     const [testWidth, setTestWidth] = useState(0);
     const [isPressed, setIsPressed] = useState(false);
 
+    const tlRef = useRef(null);
+    const borderRef = useRef(null);
+    const [tlCutout, setTlCutout] = useState(null);
+
     //timeout < 0 => dont allow refresh
     const [timeout, setTimeoutValue] = useState(0);
     const dispatch = useDispatch();
@@ -47,6 +53,34 @@ function UserCard({uid, showButtons}) {
           setTestWidth(width);
         }
       }, [hovered]);
+
+    // cuts a rectangular notch in the dashed border behind the "TL:" badge,
+    // sized to the badge's own bounding box plus a small padding
+    useEffect(() => {
+        function updateCutout() {
+            if (!tlRef.current || !borderRef.current) return;
+            const borderRect = borderRef.current.getBoundingClientRect();
+            const tlRect = tlRef.current.getBoundingClientRect();
+            setTlCutout({
+                x1: tlRect.left - borderRect.left - TL_CUTOUT_PADDING,
+                x2: tlRect.right - borderRect.left + TL_CUTOUT_PADDING,
+                y1: tlRect.top - borderRect.top - TL_CUTOUT_PADDING,
+                y2: tlRect.bottom - borderRect.top + TL_CUTOUT_PADDING,
+            });
+        }
+
+        updateCutout();
+
+        const ro = new ResizeObserver(updateCutout);
+        if (borderRef.current) ro.observe(borderRef.current);
+        if (tlRef.current) ro.observe(tlRef.current);
+
+        window.addEventListener('resize', updateCutout);
+        return () => {
+            ro.disconnect();
+            window.removeEventListener('resize', updateCutout);
+        };
+    }, [focusedUser]);
 
     useEffect(()=>{
             let focusedUserFromLS = localUsers.find( u => u.uid === uid )
@@ -196,6 +230,16 @@ function UserCard({uid, showButtons}) {
         }
     }
 
+    // mask = two perpendicular gradient stripes, each opaque outside the TL badge's
+    // range and transparent inside it. With default "add" compositing, the only
+    // spot where both stripes are transparent (their overlap) becomes a hole.
+    const borderMaskStyle = tlCutout ? {
+        WebkitMaskImage: `linear-gradient(to right, #000 0, #000 ${tlCutout.x1}px, transparent ${tlCutout.x1}px, transparent ${tlCutout.x2}px, #000 ${tlCutout.x2}px, #000 100%), linear-gradient(to bottom, #000 0, #000 ${tlCutout.y1}px, transparent ${tlCutout.y1}px, transparent ${tlCutout.y2}px, #000 ${tlCutout.y2}px, #000 100%)`,
+        maskImage: `linear-gradient(to right, #000 0, #000 ${tlCutout.x1}px, transparent ${tlCutout.x1}px, transparent ${tlCutout.x2}px, #000 ${tlCutout.x2}px, #000 100%), linear-gradient(to bottom, #000 0, #000 ${tlCutout.y1}px, transparent ${tlCutout.y1}px, transparent ${tlCutout.y2}px, #000 ${tlCutout.y2}px, #000 100%)`,
+        WebkitMaskRepeat: 'no-repeat, no-repeat',
+        maskRepeat: 'no-repeat, no-repeat',
+    } : undefined;
+
   return (
     <div className='w-full'>
 
@@ -213,12 +257,12 @@ function UserCard({uid, showButtons}) {
             <img src={cardBgUrl} className='w-full absolute -z-10 rounded-2xl' />
             <div className="absolute aspect-[31.5/17] w-full bg-gray-800/50 rounded-2xl backdrop-blur-[3px]">
 
-                <div className="absolute text-white px-0 vertical-lmao left-[3.2%] top-[16.3%] flex
-                 libre-baskerville-regular backdrop-blur-[5px] rounded-4xl z-10">
+                <div ref={tlRef} className="absolute text-white px-0 vertical-lmao left-[3.2%] top-[16.3%] flex
+                 libre-baskerville-regular rounded-4xl z-10">
                     TL: {String(focusedUser?.level ?? "")}
                 </div>
 
-                <div className="border-2 border-dashed w-[95%] ml-[5%] rounded-2xl h-full border-white/42 z-0 flex flex-col justify-between relative">
+                <div ref={borderRef} style={borderMaskStyle} className="border-2 border-dashed w-[95%] ml-[5%] rounded-2xl h-full border-white/42 z-0 flex flex-col justify-between relative">
 
                     {(showButtons) &&
                     <div className="absolute flex flex-col items-center

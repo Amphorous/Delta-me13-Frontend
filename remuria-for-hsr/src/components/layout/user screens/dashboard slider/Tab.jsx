@@ -1,6 +1,14 @@
 import React, { useEffect, useRef } from 'react'
+import { useSelector } from 'react-redux'
+import { selectPillColorMode } from '../../../../store/settingsSlice'
 
-function Tab({children, setPosition, selectedTab, setSelectedTab}) {
+const ACTIVE_TEXT_CLASSES = {
+    theme: 'text-[var(--accent-text)]',
+    card:  'text-[var(--pill-accent-text)]',
+}
+
+function Tab({children, setPosition, selectedTab, setSelectedTab, hoveredTab, setHoveredTab}) {
+    const pillColorMode = useSelector(selectPillColorMode)
 
     const ref = useRef(null);
 
@@ -30,6 +38,8 @@ function Tab({children, setPosition, selectedTab, setSelectedTab}) {
         if (!ref.current) return;
         if((children !== selectedTab) && (selectedTab !== "")) return;
 
+        setHoveredTab(children);
+
         const {width} = ref.current.getBoundingClientRect();
         setPosition({
             width,
@@ -45,8 +55,10 @@ function Tab({children, setPosition, selectedTab, setSelectedTab}) {
         }
         setSelectedTab(String(children)) //this one
     }}
-    className="relative z-10 cursor-pointer px-4 py-3 text-white mix-blend-difference flex
-     items-center justify-center gap-1 afacad-light uppercase">{children}</div>
+    className={`relative z-10 cursor-pointer px-4 py-3 flex
+     items-center justify-center gap-1 afacad-light uppercase transition-colors duration-200
+     ${pillColorMode === 'bw' ? 'text-white mix-blend-difference' : ''}
+     ${(pillColorMode !== 'bw' && (selectedTab === "" ? hoveredTab === children : selectedTab === children)) ? (ACTIVE_TEXT_CLASSES[pillColorMode] ?? ACTIVE_TEXT_CLASSES.theme) : 'text-white'}`}>{children}</div>
   )
 }
 

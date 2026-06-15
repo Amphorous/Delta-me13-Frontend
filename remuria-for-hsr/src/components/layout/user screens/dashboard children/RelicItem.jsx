@@ -434,13 +434,14 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                         >
                             { relicMetaInfo &&
                                 <div className={`flex flex-col justify-between h-full w-full items-center ${rarityTextColourGetter()} mix-blend-lighten`}>
-                                    <div className="text-center flex flex-col justify-center items-center ">
+                                    <div className="text-center flex flex-col justify-center items-center shrink-0">
                                         {Array.from({ length: relicMetaInfo[0] - 1 }).map((_, i) => (
                                             <FaStar key={i} size={14} />
                                         ))}
                                     </div>
-                                    <div className={`text-center text-sm vertical-text barcode-font mr-2.5  wider
-                                    `}>{`${cleanString(info.relic.relicId)}`}</div>
+                                    <div className={`text-center text-sm vertical-text barcode-font mr-2.5 wider flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+                                        {`${cleanString(info.relic.relicId)}`}
+                                    </div>
                                 </div>
                             }
 

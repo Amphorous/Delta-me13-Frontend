@@ -35,6 +35,9 @@
   --accent-glass: rgb(139 92 246 / 0.12);
   /* Dim muted — for subtle themed text */
   --accent-dim: rgb(167 139 250 / 0.35);
+  /* Pill selector accent — sampled from the card background when pillColorMode is "card" */
+  --pill-accent-solid: #8b5cf6;
+  --pill-accent-text: #f3e8ff;
 }
 
 /* ── Subtle accent tinge on all frosted-glass panels ──────────────────────────
