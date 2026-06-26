@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import React, { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router';
+import { useLocation, useOutletContext } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSetting, selectRelicTwoColumn, selectRelicShowCV, selectRelicCVShimmer } from '../../../../store/settingsSlice';
 import { selectLoc } from '../../../../store/localisationSlice';
@@ -58,6 +58,8 @@ function DashboardsRelics() {
   const cvShimmer = useSelector(selectRelicCVShimmer);
   const selectedLoc = useSelector(selectLoc);
 
+  const { refreshKey } = useOutletContext() || {};
+
   const [relicPageNumber, setRelicPageNumber] = useState(1);
   const [relicsInfo, setRelicsInfo] = useState(null);
   const [hasMore, setHasMore] = useState(false);
@@ -85,8 +87,10 @@ function DashboardsRelics() {
   // relic catalog
   const [allSets, setAllSets] = useState([]);
   const [allRelics, setAllRelics] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
 
   useEffect(() => {
+    setCatalogLoading(true);
     axios.get(`${import.meta.env.VITE_TRANSLATION_API_URL}/hsr/relic-catalog/${selectedLoc}`)
       .then(res => {
         setAllSets(res.data.sets || []);
@@ -95,7 +99,8 @@ function DashboardsRelics() {
       .catch(() => {
         setAllSets([]);
         setAllRelics([]);
-      });
+      })
+      .finally(() => setCatalogLoading(false));
   }, [selectedLoc]);
 
   function statLabel(statType) {
@@ -344,7 +349,7 @@ function DashboardsRelics() {
         setRelicsInfo("error");
         setHasMore(false);
       });
-  }, [relicPageNumber, sortBy, filter, typeFilter, sortOrder]);
+  }, [relicPageNumber, sortBy, filter, typeFilter, sortOrder, refreshKey]);
 
   useEffect(() => {
     const storedShowcaseStyle = localStorage.getItem("relicShowcaseStyle");
@@ -588,6 +593,7 @@ function DashboardsRelics() {
                 activeSort={sortBy}
                 activeFilter={filter} activeTypeFilter={typeFilter}
                 allSets={allSets}
+                catalogLoading={catalogLoading}
                 onSelectSort={(statType) => {
                   handleStatClick(statType);
                   setShowHelp(false);

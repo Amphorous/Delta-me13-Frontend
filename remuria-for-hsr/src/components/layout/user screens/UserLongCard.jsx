@@ -13,7 +13,7 @@ import PillSlidingSelectBar from './dashboard slider/PillSlidingSelectBar';
 import { useCutouts } from '../../CutoutUtil';
 import ExpandableRefreshButton from '../../ExpandableRefreshButton';
 
-function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector }) {
+function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRefreshComplete }) {
 
     const localUsers = useSelector(state => state.localUsers);
     const focusedUser = useSelector(state => state.focusedUser);
@@ -127,6 +127,7 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector }) {
                                 dispatch(addOrReplaceUser(userObj));
                                 dispatch(setFocus(userObj));
                                 setIsRefreshButtonActive(true);
+                                onRefreshComplete?.();
                             })
                             .catch(() => setIsRefreshButtonActive(true));
                     }

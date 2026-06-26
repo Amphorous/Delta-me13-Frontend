@@ -21,19 +21,17 @@ function Dashboard() {
   useEffect(()=>{console.log("provided uid in dashboard: ", uid)}, [uid])
 
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <div className='flex flex-col w-full h-full px-4 pt-3 pb-2 gap-3'>
 
       <div className='shrink-0'>
-        <UserLongCard uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector} />
+        <UserLongCard uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector} onRefreshComplete={() => setRefreshKey(k => k + 1)} />
       </div>
 
-      {/* <div className='shrink-0 flex justify-center'>
-        <PillSlidingSelectBar uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector}/>
-      </div> */}
-
       <div className='flex-1 min-h-0'>
-        <Outlet />
+        <Outlet context={{ refreshKey }} />
       </div>
 
     </div>
