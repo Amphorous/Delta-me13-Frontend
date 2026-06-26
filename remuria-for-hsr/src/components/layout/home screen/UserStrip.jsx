@@ -22,7 +22,7 @@ function UserStrip({user, setCardState}) {
     }
 
     function localStorageUserItemDelete(uid){
-        console.log(uid)
+        //console.log(uid)
         //setCardState(0);
         dispatch(removeFocus());
         dispatch(removeUser(uid));

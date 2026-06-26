@@ -48,7 +48,7 @@ function UserCard({uid, showButtons}) {
 
     useEffect(()=>{
             let focusedUserFromLS = localUsers.find( u => u.uid === uid )
-            console.log("focuseduserfromls: ", focusedUserFromLS)
+            //console.log("focuseduserfromls: ", focusedUserFromLS)
             if(focusedUserFromLS === undefined){
                 axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/noRefresh/${uid}`)
                         .then((res) => {
@@ -74,7 +74,7 @@ function UserCard({uid, showButtons}) {
 
                         })
                         .catch((err) => {
-                            console.log("umm what: ",err)
+                            //console.log("umm what: ",err)
                             setIsRefreshButtonActive(true);
                         })
             } else {
@@ -122,7 +122,7 @@ function UserCard({uid, showButtons}) {
     
 
     useEffect(()=>{
-        console.log("focused user read in usercard as: ", focusedUser);
+        //console.log("focused user read in usercard as: ", focusedUser);
     }, [focusedUser])
 
     function removeFocusOnBackPress(){
@@ -178,15 +178,15 @@ function UserCard({uid, showButtons}) {
 
                         })
                         .catch((err) => {
-                            console.log(err)
+                            //console.log(err)
                             setIsRefreshButtonActive(true);
                         })
                     } else {
-                        console.log("subloading failed in the backend it seems")
+                        //console.log("subloading failed in the backend it seems")
                     }
                 })
                 .catch((err) => {
-                    console.log(err)
+                    //console.log(err)
                     setIsRefreshButtonActive(true);
                 })
         } else {

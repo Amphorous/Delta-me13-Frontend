@@ -8,7 +8,7 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
       credentials: 'include',
     });
     const data = await response.json();
-    console.log('Full Discord user object:', data);
+    //console.log('Full Discord user object:', data);
 
     if (data.authenticated) {
       return data;

@@ -30,7 +30,7 @@ function Header() {
   };
 
   const focusedUserDetailsTestInHEader = useSelector( state => state.focusedUser );
-  useEffect(()=>{console.log("Header reads the focusedUser as: ",focusedUserDetailsTestInHEader)}, [focusedUserDetailsTestInHEader])
+  //useEffect(()=>{console.log("Header reads the focusedUser as: ",focusedUserDetailsTestInHEader)}, [focusedUserDetailsTestInHEader])
 
   useLayoutEffect(() => {
     if (testRef.current) {

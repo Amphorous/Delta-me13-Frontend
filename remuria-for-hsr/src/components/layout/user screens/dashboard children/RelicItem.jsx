@@ -142,14 +142,14 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
     useEffect(() => {
 
         if (info?.relic) {
-            console.log("fetching localisation for: ", info.relic.tid, " with loc: ", selectedLoc)
+            //console.log("fetching localisation for: ", info.relic.tid, " with loc: ", selectedLoc)
             axios.get(`${import.meta.env.VITE_TRANSLATION_API_URL}/hsr/relic-info/${selectedLoc}/${info.relic.tid}`)
                 .then((res) => {
                     setLocalisedRelicName(res.data.ArtifactName);
                     setLocalisedSetName(res.data.SetName);
                 })
                 .catch((err) => {
-                    console.log("Localisation Endpoint Error: ", err);
+                    //console.log("Localisation Endpoint Error: ", err);
                 });
         }
 
@@ -177,15 +177,15 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
 
     useEffect(()=>{
         if(info){
-            console.log("relic info: ",info.relic)
+            //console.log("relic info: ",info.relic)
             let metaString = info.relic.tid;
             let metaArray = [ metaString.substring(0,1), metaString.substring(1, metaString.length-1), metaString.substring(metaString.length-1) ]
-            console.log("RELIC meta info: ", metaArray);
+            //console.log("RELIC meta info: ", metaArray);
             setRelicMetaInfo(metaArray);
         }
     }, [info])
 
-    useEffect(()=>{console.log("meta array: ", relicMetaInfo)}, [relicMetaInfo])
+    //useEffect(()=>{console.log("meta array: ", relicMetaInfo)}, [relicMetaInfo])
 
     function rarityColourGetter(){
         if(relicMetaInfo){
@@ -258,7 +258,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
         if(statType.toLowerCase().includes("ratio") || statType.toLowerCase().includes("chance") ||
          statType.toLowerCase().includes("resistance") || statType.toLowerCase().includes("probability") ||
          statType.toLowerCase().includes("criticaldamage")){
-            console.log(statType)
+            //console.log(statType)
             return (<div className='text-white afacad-semi-bold text-sm text-center'>+{(statValue*100).toFixed(2)}%</div>);
         } else {
             return (<div className='text-white afacad-semi-bold text-sm text-center'>+{statValue.toFixed(2)}</div>);

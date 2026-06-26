@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDown } from 'react-icons/io';
-import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth } from '../../store/settingsSlice';
+import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth, selectBgBlur } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 import { selectLoc, setLoc } from '../../store/localisationSlice';
 
@@ -392,6 +392,45 @@ function LanguageSelector() {
 
 // ─── settings width selector ─────────────────────────────────────────────────
 
+const BG_BLUR_OPTIONS = [
+    { key: 'none', label: 'None' },
+    { key: 'low', label: 'Low' },
+    { key: 'medium', label: 'Medium' },
+    { key: 'high', label: 'High' },
+];
+
+function BgBlurSelector() {
+    const dispatch = useDispatch();
+    const bgBlur = useSelector(selectBgBlur);
+
+    return (
+        <div className='flex items-center justify-between px-4 py-3'>
+            <div className='flex flex-col min-w-0 pr-6'>
+                <p className='text-white afacad-semi-bold text-sm'>Background Blur</p>
+                <p className='text-white/55 afacad-light text-xs mt-0.5'>Controls the blur intensity on the background image.</p>
+            </div>
+            <div className='flex gap-1.5 shrink-0'>
+                {BG_BLUR_OPTIONS.map(({ key, label }) => {
+                    const active = bgBlur === key;
+                    return (
+                        <button
+                            key={key}
+                            onClick={() => dispatch(setBgBlur(key))}
+                            className={`px-3 py-1.5 rounded-lg afacad-semi-bold text-xs transition-all cursor-pointer select-none
+                                ${active
+                                    ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-60)] text-white'
+                                    : 'hover:bg-white/5 text-white/70 hover:text-white'
+                                }`}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 const WIDTH_OPTIONS = [
     { key: 'sm', label: 'Small' },
     { key: 'md', label: 'Medium' },
@@ -480,6 +519,7 @@ function Settings() {
 
                 <Section title="Background">
                     <BackgroundSelector />
+                    <BgBlurSelector />
                 </Section>
 
                 <Section title="Card Background">

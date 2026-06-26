@@ -71,7 +71,7 @@ function LanguageClickable() {
     <div className="mr-3 p-1 hover:bg-gray-400/15 rounded-sm transition cursor-pointer flex items-center gap-1 relative"
     
         ref={buttonRef} 
-        onClick={() => {setShowLocDropdown(prev => !prev);console.log("clicked loc dropdown, showLocDropdown is now: ", !showLocDropdown)}}
+        onClick={() => {setShowLocDropdown(prev => !prev);}}
     >
         <BsTranslate /> {selectedLoc.toUpperCase()}
         {showLocDropdown && positionReady && createPortal(

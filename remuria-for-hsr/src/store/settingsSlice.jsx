@@ -25,6 +25,7 @@ const defaults = {
     relicTwoColumn: false,
     relicShowCV: false,
     relicCVShimmer: true,
+    bgBlur: 'medium',
 };
 
 const saved = loadFromStorage();
@@ -53,10 +54,13 @@ const settingsSlice = createSlice({
         setSettingsWidth: (state, action) => {
             state.settingsWidth = action.payload;
         },
+        setBgBlur: (state, action) => {
+            state.bgBlur = action.payload;
+        },
     },
 });
 
-export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth } = settingsSlice.actions;
+export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur } = settingsSlice.actions;
 export const selectSettings = (state) => state.settings;
 export const selectRelicAnimations = (state) => state.settings.relicAnimations;
 export const selectBackgroundImageKey = (state) => state.settings.backgroundImageKey;
@@ -67,4 +71,5 @@ export const selectSettingsWidth = (state) => state.settings.settingsWidth;
 export const selectRelicTwoColumn = (state) => state.settings.relicTwoColumn;
 export const selectRelicShowCV = (state) => state.settings.relicShowCV;
 export const selectRelicCVShimmer = (state) => state.settings.relicCVShimmer;
+export const selectBgBlur = (state) => state.settings.bgBlur;
 export default settingsSlice.reducer;
