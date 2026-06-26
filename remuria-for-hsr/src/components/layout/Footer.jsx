@@ -18,7 +18,7 @@ function Footer() {
         animate={{ height: expanded ? "25vh" : "100%" }}
         transition={{ duration: 0.5, ease: "easeInOut" }}
       >
-        <div className='top-0 w-full flex items-center justify-between px-4'>
+        <div className='top-0 w-full flex items-center justify-between px-4 py-1'>
 
           {/* left — brand text */}
           <p className='afacad-light text-[var(--accent-dim)] text-xs select-none'>
@@ -47,7 +47,7 @@ function Footer() {
         initial = {{ opacity: 0, height: 0 }}
         animate = {{ opacity: expanded?1:0, height: expanded?100:0 }}
         transition={{ duration: 0.5, ease: "easeInOut" }}
-        className="flex-1 w-[98%] mb-5 flex items-center justify-center afacad-bold text-[#cb493e]/80 text-[550%]"
+        className="flex-1 w-[98%] mb-2 flex items-center justify-center afacad-bold text-[#cb493e]/80 text-[550%]"
         style={{
           backgroundImage: `repeating-linear-gradient(
             -45deg,

@@ -11,11 +11,16 @@ import DashboardsRelics from './components/layout/user screens/dashboard childre
 import DashboardBuilds from './components/layout/user screens/dashboard children/DashboardBuilds'
 import Validate from './components/layout/user screens/dashboard children/Validate'
 import Settings from './components/layout/Settings'
+import NotFound from './components/layout/NotFound'
+import Leaderboards from './components/layout/Leaderboards'
+import DashboardHome from './components/layout/user screens/dashboard children/DashboardHome'
+import ErrorPage from './components/layout/ErrorPage'
 
 const browserRouterObject = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "home",
@@ -39,6 +44,11 @@ const browserRouterObject = createBrowserRouter([
         handle: { crumb: () => 'Settings' }
       },
       {
+        path: "leaderboards",
+        element: <Leaderboards />,
+        handle: { crumb: () => 'Leaderboards' }
+      },
+      {
         path: "dashboard/:uid",
         element: <Dashboard />,
         handle: { crumb: () => 'Dashboard' },
@@ -47,6 +57,11 @@ const browserRouterObject = createBrowserRouter([
             path: "relics",
             element: <DashboardsRelics />,
             handle: { crumb: () => 'Relics' }
+          },
+          {
+            path: "home",
+            element: <DashboardHome />,
+            handle: { crumb: () => 'Home' }
           },
           {
             path: "builds",
@@ -60,9 +75,13 @@ const browserRouterObject = createBrowserRouter([
           },
           {
             path: "",
-            element: <Navigate to="relics" />
+            element: <Navigate to="home" />
           },
         ]
+      },
+      {
+        path: "*",
+        element: <NotFound />
       }
     ]
   }

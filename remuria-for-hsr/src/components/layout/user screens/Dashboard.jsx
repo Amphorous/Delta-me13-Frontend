@@ -11,7 +11,7 @@ function Dashboard() {
   const navigate = useNavigate();
 
   //0 = relics, 1 = builds
-  const [rightDisplaySelector, setRightDisplaySelector] = useState("relics");
+  const [rightDisplaySelector, setRightDisplaySelector] = useState("home");
 
   useEffect(()=>{
     console.log("right display selector: ", rightDisplaySelector)
@@ -25,12 +25,12 @@ function Dashboard() {
     <div className='flex flex-col w-full h-full px-4 pt-3 pb-2 gap-3'>
 
       <div className='shrink-0'>
-        <UserLongCard uid={uid} />
+        <UserLongCard uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector} />
       </div>
 
-      <div className='shrink-0 flex justify-center'>
+      {/* <div className='shrink-0 flex justify-center'>
         <PillSlidingSelectBar uid={uid} rightDisplaySelector={rightDisplaySelector} setRightDisplaySelector={setRightDisplaySelector}/>
-      </div>
+      </div> */}
 
       <div className='flex-1 min-h-0'>
         <Outlet />

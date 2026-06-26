@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDown } from 'react-icons/io';
-import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setSettingsWidth, selectSettings, selectThemeKey, selectSettingsWidth } from '../../store/settingsSlice';
+import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 import { selectLoc, setLoc } from '../../store/localisationSlice';
 
@@ -62,9 +62,26 @@ function Section({ title, children }) {
 
 // ─── image picker row ─────────────────────────────────────────────────────────
 
+function ImageLoadBlink() {
+    return (
+        <motion.div
+            animate={{ opacity: [0.25, 0.85, 0.25] }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+            className='absolute inset-0 flex items-center justify-center bg-gray-900/50'
+        >
+            <div className='w-2 h-2 rounded-full bg-white/70' />
+        </motion.div>
+    );
+}
+
 function ImagePickerRow({ images, activeKey, onSelect }) {
     const [open, setOpen] = useState(false);
+    const [loaded, setLoaded] = useState({});
     const active = images.find(b => b.key === activeKey) ?? images[0];
+
+    function markLoaded(key) {
+        setLoaded(prev => (prev[key] ? prev : { ...prev, [key]: true }));
+    }
 
     return (
         <div>
@@ -73,7 +90,15 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                 onClick={() => setOpen(o => !o)}
             >
                 {active && (
-                    <img src={active.url} alt={active.key} className='w-14 h-9 rounded-lg object-cover shrink-0 ring-1 ring-white/10' />
+                    <div className='relative w-14 h-9 rounded-lg overflow-hidden shrink-0 ring-1 ring-white/10'>
+                        <img
+                            src={active.url}
+                            alt={active.key}
+                            className='w-full h-full object-cover'
+                            onLoad={() => markLoaded(active.key)}
+                        />
+                        {!loaded[active.key] && <ImageLoadBlink />}
+                    </div>
                 )}
                 <span className='text-white afacad-semi-bold text-sm ml-3 flex-1 truncate'>
                     {active?.filename ?? '—'}
@@ -110,7 +135,13 @@ function ImagePickerRow({ images, activeKey, onSelect }) {
                                                     : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-[1.02]'
                                                 }`}
                                         >
-                                            <img src={bg.url} alt={bg.key} className='w-full h-full object-cover' />
+                                            <img
+                                                src={bg.url}
+                                                alt={bg.key}
+                                                className='w-full h-full object-cover'
+                                                onLoad={() => markLoaded(bg.key)}
+                                            />
+                                            {!loaded[bg.key] && <ImageLoadBlink />}
                                             <div className='absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2'>
                                                 <span className='text-white afacad-light text-[10px] truncate'>{bg.filename}</span>
                                             </div>
@@ -211,6 +242,43 @@ function ThemeSelector() {
                     Adaptive samples the background image to generate a matching accent colour.
                 </p>
             )}
+        </div>
+    );
+}
+
+// ─── pill accent selector ──────────────────────────────────────────────────────
+
+const PILL_COLOR_OPTIONS = [
+    { key: 'theme', label: 'Background', description: 'Matches the site accent colour (the active theme).' },
+    { key: 'card', label: 'Card Background', description: 'Sampled from the card background image.' },
+    { key: 'bw', label: 'Black & White', description: 'Plain black-and-white inverting highlight.' },
+];
+
+function PillColorSelector() {
+    const dispatch = useDispatch();
+    const pillColorMode = useSelector(selectPillColorMode);
+
+    return (
+        <div className='flex gap-2 px-4 py-3 flex-wrap'>
+            {PILL_COLOR_OPTIONS.map(({ key, label }) => {
+                const active = pillColorMode === key;
+                return (
+                    <button
+                        key={key}
+                        onClick={() => dispatch(setPillColorMode(key))}
+                        className={`px-4 py-2 rounded-lg afacad-semi-bold text-xs transition-all cursor-pointer select-none
+                            ${active
+                                ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-60)] text-white'
+                                : 'hover:bg-white/5 text-white/70 hover:text-white'
+                            }`}
+                    >
+                        {label}
+                    </button>
+                );
+            })}
+            <p className='w-full afacad-light text-white/50 text-xs px-1 mt-0.5'>
+                {PILL_COLOR_OPTIONS.find(o => o.key === pillColorMode)?.description}
+            </p>
         </div>
     );
 }
@@ -420,6 +488,10 @@ function Settings() {
 
                 <Section title="Panel">
                     <SettingsWidthSelector />
+                </Section>
+
+                <Section title="Dashboard Tab Pill">
+                    <PillColorSelector />
                 </Section>
 
                 <Section title="Data">

@@ -86,7 +86,13 @@ function cvBadgeText(cv) {
     return 'text-blue-300';
 }
 
-function RelicItem({info, relicIndex, onStatClick, sortBy}) {
+function isRelicNew(creationDate) {
+    if (!creationDate) return false;
+    const created = new Date(creationDate);
+    return (Date.now() - created.getTime()) < 24 * 60 * 60 * 1000;
+}
+
+function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, activeFilter, activeTypeFilter}) {
     //meta info has [ rarity+1, setId, position/type ] (this is basically segmenting the tid into 3 parts)
 
     // make sure to have a state function which gives an option to show relics in a list (compact) or a detailed format
@@ -275,7 +281,10 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
             <div className="relative h-full w-full mr-1 flex">
                <div className='h-full w-1/3 bg-gray-700/40 rounded-md mr-1 flex flex-col items-center justify-center relative'>
                     {/* image section */}
-                    <img src={imageGetter()} alt="" className="aspect-square h-full w-full object-contain" />
+                    <img src={imageGetter()} alt=""
+                         className="aspect-square h-full w-full object-contain cursor-pointer"
+                         onClick={() => onFilterClick?.('tid', info.relic.tid, localisedRelicName)}
+                    />
                     {/* CV badge — absolute top-left */}
                     {showCV && (
                         <div
@@ -286,6 +295,12 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                             onMouseLeave={() => handleCVHover(false)}
                         >
                             <span className={`afacad-bold text-[10px] leading-none ${cvBadgeText(cv)}`}>{cv.toFixed(1)}</span>
+                        </div>
+                    )}
+                    {isRelicNew(info.relic.creationDate) && (
+                        <div className='absolute top-1 right-1 z-10 bg-amber-900/90 border border-amber-500/40 rounded px-1.5 flex items-center'
+                             style={{ boxShadow: '0 0 8px rgba(245,158,11,0.5), 0 0 20px rgba(245,158,11,0.2)' }}>
+                            <span className='afacad-bold text-[10px] text-amber-200'>NEW</span>
                         </div>
                     )}
                     {showCVTooltip && createPortal(
@@ -309,7 +324,10 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                         document.body
                     )}
                     <div className='bg-blfack w-full flex justify-evenly text-white m-2'>
-                        <img src={relicIconGetter()} alt="" className="aspect-square h-4.5 object-contain rounded-full " />
+                        <img src={relicIconGetter()} alt=""
+                             className={`aspect-square h-4.5 object-contain rounded-full cursor-pointer transition ${activeTypeFilter?.value === info.relic.type ? 'ring-1 ring-[var(--accent-muted)] brightness-125' : 'hover:brightness-150'}`}
+                             onClick={() => onFilterClick?.('type', info.relic.type, info.relic.type)}
+                        />
                         <div
                             ref={buildsIconRef}
                             className={`transition cursor-pointer ${info?.builds?.length ? 'hover:text-[var(--accent-muted)]' : 'opacity-30 cursor-default'}`}
@@ -348,12 +366,15 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                         {/* name section */}
                         { relicMetaInfo && <>
                             <div className='flex flex-col px-2 w-full h-full justify-between'>
-                                <div className='text-white afacad-bold text-lg mt-2 '
+                                <div className={`afacad-bold text-lg mt-2 cursor-pointer transition ${activeFilter?.field === 'tid' && activeFilter?.value === info.relic.tid ? 'text-[var(--accent-muted)]' : 'text-white hover:text-[var(--accent-muted)]'}`}
                                     style={{lineHeight: 1.1}}
+                                    onClick={() => onFilterClick?.('tid', info.relic.tid, localisedRelicName)}
                                 >
                                     { localisedRelicName }
                                 </div>
-                                <div className='text-white afacad-bold text-sm mb-1.5'>
+                                <div className={`afacad-bold text-sm mb-1.5 cursor-pointer transition ${activeFilter?.field === 'setName' && activeFilter?.value === info.relic.setName ? 'text-[var(--accent-muted)]' : 'text-white hover:text-[var(--accent-muted)]'}`}
+                                    onClick={() => onFilterClick?.('setName', info.relic.setName, localisedSetName)}
+                                >
                                     { localisedSetName }
                                 </div>
                             </div>
@@ -361,16 +382,16 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                     </div>
                     <div className='w-full bg-gray-700/40 rounded-md h-2/3 flex items-center'>
                         {/* stats section */}
-                        <div className='h-[95%] mx-1 bg-black/20 rounded-md w-[43%] flex flex-col items-center'>
+                        <div
+                            className={`h-[95%] mx-1 rounded-md w-[43%] flex flex-col items-center cursor-pointer transition ${sortBy === info.relic.mainType ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : 'bg-black/20 hover:bg-white/5'}`}
+                            onClick={() => onStatClick?.(info.relic.mainType)}
+                            onMouseEnter={e => showStatTooltip(e, info.relic.mainType)}
+                            onMouseLeave={() => setHoveredStat(null)}
+                        >
                             {/* main stat */}
 
                             <div className='h-[5%] text-center text-white afacad-bold text-sm my-1'>+{`${(info.relic.level === "null" ? 0 : info.relic.level)}`}</div>
-                            <div
-                                className={`h-full w-full mt-1 flex flex-col items-center justify-center rounded-md transition cursor-pointer hover:bg-white/5 ${sortBy === info.relic.mainType ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : ''}`}
-                                onClick={() => onStatClick?.(info.relic.mainType)}
-                                onMouseEnter={e => showStatTooltip(e, info.relic.mainType)}
-                                onMouseLeave={() => setHoveredStat(null)}
-                            >
+                            <div className='h-full w-full mt-1 flex flex-col items-center justify-center rounded-md'>
                                 <img src={`${statImageGetter(info.relic.mainType)}`} alt=";(" className="aspect-square w-1/2 mb-3 object-contain " />
                                 {statValueGetter(info.relic.mainValue, info.relic.mainType)}
                             </div>
@@ -386,7 +407,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                                         {sub ?
                                         <>
                                             <div
-                                                className={`w-full bg-black/20 rounded-md h-full flex items-center cursor-pointer transition hover:bg-white/10 ${sortBy === sub.type ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : ''}`}
+                                                className={`w-full rounded-md h-full flex items-center cursor-pointer transition ${sortBy === sub.type ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : 'bg-black/20 hover:bg-white/10'}`}
                                                 onClick={() => onStatClick?.(sub.type)}
                                                 onMouseEnter={e => showStatTooltip(e, sub.type)}
                                                 onMouseLeave={() => setHoveredStat(null)}
@@ -434,13 +455,14 @@ function RelicItem({info, relicIndex, onStatClick, sortBy}) {
                         >
                             { relicMetaInfo &&
                                 <div className={`flex flex-col justify-between h-full w-full items-center ${rarityTextColourGetter()} mix-blend-lighten`}>
-                                    <div className="text-center flex flex-col justify-center items-center ">
+                                    <div className="text-center flex flex-col justify-center items-center shrink-0">
                                         {Array.from({ length: relicMetaInfo[0] - 1 }).map((_, i) => (
                                             <FaStar key={i} size={14} />
                                         ))}
                                     </div>
-                                    <div className={`text-center text-sm vertical-text barcode-font mr-2.5  wider
-                                    `}>{`${cleanString(info.relic.relicId)}`}</div>
+                                    <div className={`text-center text-sm vertical-text barcode-font mr-2.5 wider flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+                                        {`${cleanString(info.relic.relicId)}`}
+                                    </div>
                                 </div>
                             }
 

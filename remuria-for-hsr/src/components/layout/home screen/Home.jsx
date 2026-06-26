@@ -52,39 +52,54 @@ function Home() {
   
   
 
+  function handleUserCardResponse(res) {
+    setCardInfo(res.data);
+
+    let userObjForLocalStorage = {
+      uid: res.data.uid,
+      nickname: res.data.nickname,
+      signature: res.data.signature,
+      region: res.data.region,
+      headIcon: res.data.headIcon,
+      level: res.data.level,
+      achievementCount: res.data.achievementCount,
+      buildsPublic: res.data.buildsPublic
+    }
+    setCardState(1);
+
+    dispatch(addOrReplaceUser(userObjForLocalStorage))
+    dispatch(setFocus(userObjForLocalStorage))
+
+    setResponseWait(false);
+  }
+
   function submitHandler(obj){
     const uid = obj.uid;
-    //console.log("UID form output (Home.jsx) :", uid);
 
     setResponseWait(true);
     axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/noRefresh/${uid}`)
       .then((res) => {
-        setCardInfo(res.data);
-
-        //console.log(res.data)
-
-        let userObjForLocalStorage = {
-          uid: res.data.uid,
-          nickname: res.data.nickname,
-          signature: res.data.signature,
-          region: res.data.region,
-          headIcon: res.data.headIcon,
-          level: res.data.level,
-          achievementCount: res.data.achievementCount,
-          buildsPublic: res.data.buildsPublic
-        }
-        setCardState(1);
-
-        dispatch(addOrReplaceUser(userObjForLocalStorage))
-        dispatch(setFocus(userObjForLocalStorage))
-
-        setResponseWait(false);
+        handleUserCardResponse(res);
       })
       .catch((err) => {
-        //console.log("error caught", err)
-        setCardState(-1);
-        setCardInfo(undefined);
-        setResponseWait(false);
+        if (err.response && err.response.status === 404) {
+          axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/${uid}`)
+            .then(() => {
+              return axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/noRefresh/${uid}`);
+            })
+            .then((res) => {
+              handleUserCardResponse(res);
+            })
+            .catch(() => {
+              setCardState(-1);
+              setCardInfo(undefined);
+              setResponseWait(false);
+            });
+        } else {
+          setCardState(-1);
+          setCardInfo(undefined);
+          setResponseWait(false);
+        }
       })
   }
 
