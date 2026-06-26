@@ -24,7 +24,7 @@ function SectionHeader({ children }) {
     );
 }
 
-function RelicFilterHelp({ anchorRef, activeSort, activeFilter, activeTypeFilter, allSets = [], onSelectSort, onSelectFilter, onClose }) {
+function RelicFilterHelp({ anchorRef, activeSort, activeFilter, activeTypeFilter, allSets = [], catalogLoading, onSelectSort, onSelectFilter, onClose }) {
     const popupRef = useRef(null);
     const [pos, setPos] = useState({ top: 0, left: 0 });
 
@@ -91,9 +91,14 @@ function RelicFilterHelp({ anchorRef, activeSort, activeFilter, activeTypeFilter
                 </div>
 
                 {/* Sets */}
-                {allSets.length > 0 && (
-                    <div className='flex-1 min-w-0'>
-                        <span className='text-white/20 afacad-light text-[9px] uppercase mb-0.5 block'>Set</span>
+                <div className='flex-1 min-w-0'>
+                    <span className='text-white/20 afacad-light text-[9px] uppercase mb-0.5 block'>Set</span>
+                    {catalogLoading ? (
+                        <div className='flex items-center gap-2 py-3 justify-center text-white/25 afacad-light text-xs'>
+                            <div className='w-3.5 h-3.5 border-2 border-white/15 border-t-white/50 rounded-full animate-spin' />
+                            Loading sets...
+                        </div>
+                    ) : allSets.length > 0 ? (
                         <div className='flex flex-wrap gap-1 max-h-40 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full'>
                             {allSets.map(set => (
                                 <button
@@ -106,8 +111,10 @@ function RelicFilterHelp({ anchorRef, activeSort, activeFilter, activeTypeFilter
                                 </button>
                             ))}
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <p className='text-white/20 afacad-light text-[9px] py-2'>No sets available</p>
+                    )}
+                </div>
             </div>
 
             <div className='h-px bg-white/5 mb-2' />
