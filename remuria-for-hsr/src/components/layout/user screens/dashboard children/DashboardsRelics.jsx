@@ -345,7 +345,7 @@ function DashboardsRelics() {
         setHasMore(res.data.hasMore);
       })
       .catch((err) => {
-        console.log(err);
+        //console.log(err);
         setRelicsInfo("error");
         setHasMore(false);
       });

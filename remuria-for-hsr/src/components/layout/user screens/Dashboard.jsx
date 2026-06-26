@@ -14,11 +14,11 @@ function Dashboard() {
   const [rightDisplaySelector, setRightDisplaySelector] = useState("home");
 
   useEffect(()=>{
-    console.log("right display selector: ", rightDisplaySelector)
+    //console.log("right display selector: ", rightDisplaySelector)
     navigate(`${rightDisplaySelector}`)
   }, [rightDisplaySelector])
 
-  useEffect(()=>{console.log("provided uid in dashboard: ", uid)}, [uid])
+  //useEffect(()=>{console.log("provided uid in dashboard: ", uid)}, [uid])
 
 
   const [refreshKey, setRefreshKey] = useState(0);
