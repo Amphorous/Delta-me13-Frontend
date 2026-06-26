@@ -7,7 +7,7 @@ const ACTIVE_TEXT_CLASSES = {
     card:  'text-[var(--pill-accent-text)]',
 }
 
-function Tab({children, setPosition, selectedTab, setSelectedTab, hoveredTab, setHoveredTab}) {
+function Tab({children, icon, setPosition, selectedTab, setSelectedTab, hoveredTab, setHoveredTab}) {
     const pillColorMode = useSelector(selectPillColorMode)
 
     const ref = useRef(null);
@@ -32,8 +32,9 @@ function Tab({children, setPosition, selectedTab, setSelectedTab, hoveredTab, se
     }, [selectedTab])
 
   return (
-    <div 
+    <div
     ref={ref}
+    title={children}
     onMouseEnter={()=>{
         if (!ref.current) return;
         if((children !== selectedTab) && (selectedTab !== "")) return;
@@ -46,19 +47,20 @@ function Tab({children, setPosition, selectedTab, setSelectedTab, hoveredTab, se
             opacity: 1,
             left: ref.current.offsetLeft,
         })
-        //console.log(children)
     }}
     onClick={()=>{
         if(children === selectedTab){
             setSelectedTab("");
             return;
         }
-        setSelectedTab(String(children)) //this one
+        setSelectedTab(String(children))
     }}
-    className={`relative z-10 cursor-pointer px-4 py-3 flex
-     items-center justify-center gap-1 afacad-light uppercase transition-colors duration-200
+    className={`relative z-10 cursor-pointer px-2.5 py-2 flex
+     items-center justify-center transition-colors duration-200
      ${pillColorMode === 'bw' ? 'text-white mix-blend-difference' : ''}
-     ${(pillColorMode !== 'bw' && (selectedTab === "" ? hoveredTab === children : selectedTab === children)) ? (ACTIVE_TEXT_CLASSES[pillColorMode] ?? ACTIVE_TEXT_CLASSES.theme) : 'text-white'}`}>{children}</div>
+     ${(pillColorMode !== 'bw' && (selectedTab === "" ? hoveredTab === children : selectedTab === children)) ? (ACTIVE_TEXT_CLASSES[pillColorMode] ?? ACTIVE_TEXT_CLASSES.theme) : 'text-white'}`}>
+      {icon || children}
+    </div>
   )
 }
 

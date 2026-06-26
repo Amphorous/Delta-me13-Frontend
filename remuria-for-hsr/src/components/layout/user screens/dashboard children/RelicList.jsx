@@ -54,6 +54,12 @@ const SHIMMER_CSS = `
 .cv-glow-gold { text-shadow: 0 0 8px rgba(234,179,8,0.85),  0 0 18px rgba(234,179,8,0.4);  }
 `;
 
+function isRelicNew(creationDate) {
+    if (!creationDate) return false;
+    const created = new Date(creationDate);
+    return (Date.now() - created.getTime()) < 24 * 60 * 60 * 1000;
+}
+
 function calcCV(relic) {
     let critRate = 0, critDmg = 0;
     (relic.subAffixes || []).forEach(sub => {
@@ -74,7 +80,7 @@ function cvClass(cv, shimmer) {
     return `text-blue-400 ${base}`;
 }
 
-function RelicList({ info, relicPageNumber, twoColumn, showCV, cvShimmer, onStatClick, sortBy }) {
+function RelicList({ info, relicPageNumber, twoColumn, showCV, cvShimmer, onStatClick, sortBy, onFilterClick, activeFilter, activeTypeFilter }) {
 
     const [localisedRelicName, setLocalisedRelicName] = useState([]);
     const [localisedSetName, setLocalisedSetName] = useState([]);
@@ -223,30 +229,59 @@ function RelicList({ info, relicPageNumber, twoColumn, showCV, cvShimmer, onStat
                 )}
 
                 {/* rows */}
-                <div className={twoColumn ? 'grid grid-cols-2 gap-x-3 gap-y-1' : 'flex flex-col gap-1'}>
+                <div className={twoColumn ? 'columns-2 gap-3' : 'flex flex-col gap-1'}>
                     {info && info.map((record, index) => {
-                        if (!record || record === "lastItem" || record === "error" || !record.relic) return null;
+                        if (!record || !record.relic) return null;
                         const relic = record.relic;
                         const metaArray = relic.tid ? metaArrayGetter(relic.tid) : [];
                         const cv = showCV ? calcCV(relic) : 0;
 
+                        const hasSortedStat = sortBy && sortBy !== 'CV' && (
+                            relic.mainType === sortBy ||
+                            (relic.subAffixes || []).some(s => s?.type === sortBy)
+                        );
+
+                        const relicIndex = (relicPageNumber - 1) * 20 + index + 1;
+                        const isOdd = index % 2 === 1;
+
                         return (
                             <div key={index}
-                                className='flex items-center gap-3 rounded-lg bg-gray-900/50 backdrop-blur-sm overflow-hidden hover:bg-gray-800/60 transition-colors'
+                                className={`flex items-center gap-3 rounded-lg backdrop-blur-sm overflow-hidden transition-colors break-inside-avoid mb-1 relative ${hasSortedStat ? (isOdd ? 'bg-[var(--accent-bg-30)]' : 'bg-[var(--accent-bg-20)]') + ' ring-1 ring-[var(--accent-border-30)]' : isOdd ? 'bg-gray-800/50 hover:bg-gray-700/60' : 'bg-gray-900/50 hover:bg-gray-800/60'}`}
                             >
+                                {/* index bubble */}
+                                <div className='absolute top-0.5 left-1.5 z-10 bg-black/40 rounded-full w-4 h-4 flex items-center justify-center'>
+                                    <span className='afacad-light text-white/30 text-[8px] leading-none'>{relicIndex}</span>
+                                </div>
+
                                 {/* rarity accent bar */}
                                 <div className={`w-1 self-stretch shrink-0 ${rarityBGColourGetter(metaArray)}`} />
 
                                 {/* piece image + slot icon */}
                                 <div className='w-10 shrink-0 relative py-2'>
-                                    <img src={imageGetter(metaArray)} alt="" className="w-10 h-10 object-contain" />
-                                    <img src={relicIconGetter(metaArray)} alt="" className="absolute bottom-1.5 right-0 w-4 h-4 object-contain opacity-60 bg-black/40 rounded-full p-0.5" />
+                                    <img src={imageGetter(metaArray)} alt=""
+                                         className="w-10 h-10 object-contain cursor-pointer"
+                                         onClick={() => onFilterClick?.('tid', relic.tid, localisedRelicName[index])}
+                                    />
+                                    <img src={relicIconGetter(metaArray)} alt=""
+                                         className={`absolute bottom-1.5 right-0 w-4 h-4 object-contain bg-black/40 rounded-full p-0.5 cursor-pointer transition ${activeTypeFilter?.value === metaArray[2] ? 'opacity-100 ring-1 ring-[var(--accent-muted)]' : 'opacity-60 hover:opacity-100'}`}
+                                         onClick={() => onFilterClick?.('type', metaArray[2], metaArray[2])}
+                                    />
                                 </div>
 
                                 {/* name + set */}
                                 <div className='w-52 shrink-0 min-w-0 py-2.5'>
-                                    <p className='text-white afacad-bold text-base leading-tight truncate'>{localisedRelicName[index]}</p>
-                                    <p className='text-white/40 afacad-light text-xs truncate mt-0.5'>{localisedSetName[index]}</p>
+                                    <div className='flex items-center gap-1.5'>
+                                        <p className={`afacad-bold text-base leading-tight truncate cursor-pointer transition ${activeFilter?.field === 'tid' && activeFilter?.value === relic.tid ? 'text-[var(--accent-muted)]' : 'text-white hover:text-[var(--accent-muted)]'}`}
+                                           onClick={() => onFilterClick?.('tid', relic.tid, localisedRelicName[index])}
+                                        >{localisedRelicName[index]}</p>
+                                        {isRelicNew(relic.creationDate) && (
+                                            <span className='bg-amber-900/90 border border-amber-500/40 rounded px-1 py-px afacad-bold text-[9px] leading-none text-amber-200 shrink-0'
+                                                  style={{ boxShadow: '0 0 6px rgba(245,158,11,0.4), 0 0 14px rgba(245,158,11,0.15)' }}>NEW</span>
+                                        )}
+                                    </div>
+                                    <p className={`afacad-light text-xs truncate mt-0.5 cursor-pointer transition ${activeFilter?.field === 'setName' && activeFilter?.value === relic.setName ? 'text-[var(--accent-muted)]' : 'text-white/40 hover:text-[var(--accent-muted)]'}`}
+                                       onClick={() => onFilterClick?.('setName', relic.setName, localisedSetName[index])}
+                                    >{localisedSetName[index]}</p>
                                 </div>
 
                                 {/* level */}
@@ -255,7 +290,10 @@ function RelicList({ info, relicPageNumber, twoColumn, showCV, cvShimmer, onStat
                                 </div>
 
                                 {/* main stat */}
-                                <div className='w-44 shrink-0 flex items-center gap-2'>
+                                <div
+                                    className={`w-44 shrink-0 flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer transition ${sortBy === relic.mainType ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]' : 'hover:bg-white/5'}`}
+                                    onClick={() => onStatClick?.(relic.mainType)}
+                                >
                                     <img src={statImageGetter(relic.mainType)} alt="" className="w-5 h-5 object-contain shrink-0" />
                                     <span className='text-white/50 afacad-light text-sm whitespace-nowrap'>{statNameGetter(relic.mainType)}</span>
                                     <span className='text-white afacad-bold text-sm whitespace-nowrap'>{inlineStatValue(relic.mainValue, relic.mainType)}</span>
@@ -268,6 +306,7 @@ function RelicList({ info, relicPageNumber, twoColumn, showCV, cvShimmer, onStat
                                         return sub ? (
                                             <div
                                                 key={i}
+                                                title={`${statNameGetter(sub.type)} ${inlineStatValue(sub.value, sub.type)}`}
                                                 className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 w-[23%] min-w-0 shrink-0 cursor-pointer transition
                                                     ${sortBy === sub.type
                                                         ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-30)]'

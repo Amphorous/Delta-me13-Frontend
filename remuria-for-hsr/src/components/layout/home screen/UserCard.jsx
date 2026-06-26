@@ -1,18 +1,19 @@
 import axios from 'axios';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { removeFocus, setFocus } from '../../../store/userCardSlice';
 import avatars from '../../../assets/pfps.json';
 import ach from '../../../assets/achievementIcon.webp';
 import { cardBackgroundImages } from '../../../assets/backgroundImages';
 import { selectCardBackgroundImageKey } from '../../../store/settingsSlice';
-import { IoMdRefresh } from "react-icons/io";
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { addOrReplaceUser } from '../../../store/localUsersSlice';
 import { useNavigate } from 'react-router';
 import { IoIosArrowForward } from "react-icons/io";
 import { IoMdClose } from "react-icons/io";
 import { ImEyeBlocked } from "react-icons/im";
+import { useCutouts } from '../../CutoutUtil';
+import ExpandableRefreshButton from '../../ExpandableRefreshButton';
 
 const TL_CUTOUT_PADDING = 4;
 
@@ -34,53 +35,16 @@ function UserCard({uid, showButtons}) {
     const [isRefreshPossible, setIsRefreshPossible] = useState(true);
     const [isRefreshButtonActive, setIsRefreshButtonActive] = useState(true);
 
-    const [hovered, setHovered] = useState(false);
-    const testRef = useRef(null);
-    const [testWidth, setTestWidth] = useState(0);
-    const [isPressed, setIsPressed] = useState(false);
-
     const tlRef = useRef(null);
     const borderRef = useRef(null);
-    const [tlCutout, setTlCutout] = useState(null);
+
+    const borderMaskStyle = useCutouts(borderRef, [
+        { ref: tlRef, type: 'rect', padding: TL_CUTOUT_PADDING },
+    ], [focusedUser]);
 
     //timeout < 0 => dont allow refresh
     const [timeout, setTimeoutValue] = useState(0);
     const dispatch = useDispatch();
-
-    useLayoutEffect(() => {
-        if (testRef.current) {
-          const width = hovered ? testRef.current.offsetWidth : 0;
-          setTestWidth(width);
-        }
-      }, [hovered]);
-
-    // cuts a rectangular notch in the dashed border behind the "TL:" badge,
-    // sized to the badge's own bounding box plus a small padding
-    useEffect(() => {
-        function updateCutout() {
-            if (!tlRef.current || !borderRef.current) return;
-            const borderRect = borderRef.current.getBoundingClientRect();
-            const tlRect = tlRef.current.getBoundingClientRect();
-            setTlCutout({
-                x1: tlRect.left - borderRect.left - TL_CUTOUT_PADDING,
-                x2: tlRect.right - borderRect.left + TL_CUTOUT_PADDING,
-                y1: tlRect.top - borderRect.top - TL_CUTOUT_PADDING,
-                y2: tlRect.bottom - borderRect.top + TL_CUTOUT_PADDING,
-            });
-        }
-
-        updateCutout();
-
-        const ro = new ResizeObserver(updateCutout);
-        if (borderRef.current) ro.observe(borderRef.current);
-        if (tlRef.current) ro.observe(tlRef.current);
-
-        window.addEventListener('resize', updateCutout);
-        return () => {
-            ro.disconnect();
-            window.removeEventListener('resize', updateCutout);
-        };
-    }, [focusedUser]);
 
     useEffect(()=>{
             let focusedUserFromLS = localUsers.find( u => u.uid === uid )
@@ -230,16 +194,6 @@ function UserCard({uid, showButtons}) {
         }
     }
 
-    // mask = two perpendicular gradient stripes, each opaque outside the TL badge's
-    // range and transparent inside it. With default "add" compositing, the only
-    // spot where both stripes are transparent (their overlap) becomes a hole.
-    const borderMaskStyle = tlCutout ? {
-        WebkitMaskImage: `linear-gradient(to right, #000 0, #000 ${tlCutout.x1}px, transparent ${tlCutout.x1}px, transparent ${tlCutout.x2}px, #000 ${tlCutout.x2}px, #000 100%), linear-gradient(to bottom, #000 0, #000 ${tlCutout.y1}px, transparent ${tlCutout.y1}px, transparent ${tlCutout.y2}px, #000 ${tlCutout.y2}px, #000 100%)`,
-        maskImage: `linear-gradient(to right, #000 0, #000 ${tlCutout.x1}px, transparent ${tlCutout.x1}px, transparent ${tlCutout.x2}px, #000 ${tlCutout.x2}px, #000 100%), linear-gradient(to bottom, #000 0, #000 ${tlCutout.y1}px, transparent ${tlCutout.y1}px, transparent ${tlCutout.y2}px, #000 ${tlCutout.y2}px, #000 100%)`,
-        WebkitMaskRepeat: 'no-repeat, no-repeat',
-        maskRepeat: 'no-repeat, no-repeat',
-    } : undefined;
-
   return (
     <div className='w-full'>
 
@@ -371,55 +325,14 @@ function UserCard({uid, showButtons}) {
                             </>}
                         </div>
 
-                        {(isRefreshPossible && isRefreshButtonActive)?
-                            <div className={`${(isPressed)?'bg-black/80 text-white':'bg-white/15 border border-white/20 text-white/70 hover:bg-white hover:text-black/80'} transition
-                            px-2.5 py-0.5 rounded-full mr-2 flex items-center justify-center cursor-pointer text-xs`}
-                            onMouseEnter={() => setHovered(true)}
-                            onMouseLeave={() => {{
-                                setIsPressed(false);
-                                setHovered(false);
-                            }}}
-                            onMouseDown={() => setIsPressed(true)}
-                            onMouseUp={() => setIsPressed(false)}
-                            onClick={() => {upsertUserRequest(uid)}}
-                        >
-
-                            <motion.div
-                            animate={{ width: hovered ? testWidth : 0 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
-                            className="overflow-hidden"
-                            >
-                                <AnimatePresence initial={false}>
-                                    {hovered && (
-                                    <motion.div
-                                        className="flex"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.15 }}
-                                    >
-                                        <div className="mr-1">
-                                            Refresh
-                                        </div>
-                                    </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.div>
-
-                            <IoMdRefresh />
-                        </div>:
-                        <div className='px-2.5 py-0.5 rounded-full mr-2 flex items-center justify-center bg-white/5 border border-white/10 text-white/30 gap-1 text-xs cursor-not-allowed'>
-                             {timeout*-1}s <IoMdRefresh />
-                        </div>}
-                        {/* / */}
-                        <div className="absolute invisible pointer-events-none h-0 overflow-hidden afacad-light">
-                            <div ref={testRef} className="flex">
-                                <div className="mr-1">
-                                    Refresh
-                                </div>
-                            </div>
+                        <div className="mr-2">
+                            <ExpandableRefreshButton
+                                onClick={() => upsertUserRequest(uid)}
+                                enabled={isRefreshPossible && isRefreshButtonActive}
+                                loading={!isRefreshButtonActive}
+                                countdown={timeout * -1}
+                            />
                         </div>
-                        {/* / */}
                     </div>
                 </div>
 

@@ -14,11 +14,13 @@ import Settings from './components/layout/Settings'
 import NotFound from './components/layout/NotFound'
 import Leaderboards from './components/layout/Leaderboards'
 import DashboardHome from './components/layout/user screens/dashboard children/DashboardHome'
+import ErrorPage from './components/layout/ErrorPage'
 
 const browserRouterObject = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "home",
