@@ -6,10 +6,9 @@ import avatars from '../../../assets/pfps.json';
 import ach from '../../../assets/achievementIcon.webp';
 import { cardBackgroundImages } from '../../../assets/backgroundImages';
 import { selectCardBackgroundImageKey } from '../../../store/settingsSlice';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { addOrReplaceUser } from '../../../store/localUsersSlice';
 import { useNavigate } from 'react-router';
-import { IoIosArrowForward } from "react-icons/io";
 import { IoMdClose } from "react-icons/io";
 import { ImEyeBlocked } from "react-icons/im";
 import { useCutouts } from '../../CutoutUtil';
@@ -37,6 +36,27 @@ function UserCard({uid, showButtons}) {
 
     const tlRef = useRef(null);
     const borderRef = useRef(null);
+    const cardRef = useRef(null);
+
+    const rawRotateX = useMotionValue(0);
+    const rawRotateY = useMotionValue(0);
+    const rotateX = useSpring(rawRotateX, { stiffness: 220, damping: 28 });
+    const rotateY = useSpring(rawRotateY, { stiffness: 220, damping: 28 });
+
+    function handleMouseMove(e) {
+        const card = cardRef.current;
+        if (!card) return;
+        const rect = card.getBoundingClientRect();
+        const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+        const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+        rawRotateY.set(dx * 7);
+        rawRotateX.set(-dy * 4);
+    }
+
+    function handleMouseLeave() {
+        rawRotateX.set(0);
+        rawRotateY.set(0);
+    }
 
     const borderMaskStyle = useCutouts(borderRef, [
         { ref: tlRef, type: 'rect', padding: TL_CUTOUT_PADDING },
@@ -203,10 +223,16 @@ function UserCard({uid, showButtons}) {
             </div>
         }
 
-        <motion.div className='aspect-[31.5/15] w-full  relative rounded-2xl '
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
+        <motion.div
+          ref={cardRef}
+          className={`aspect-[31.5/15] w-full relative rounded-2xl${showButtons ? ' cursor-pointer' : ''}`}
+          style={{ rotateX, rotateY, transformPerspective: 900 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={() => showButtons && navigate(`/dashboard/${uid}`)}
         >
             <img src={cardBgUrl} className='w-full absolute -z-10 rounded-2xl' />
             <div className="absolute aspect-[31.5/17] w-full bg-gray-800/50 rounded-2xl backdrop-blur-[3px]">
@@ -222,20 +248,12 @@ function UserCard({uid, showButtons}) {
                     <div className="absolute flex flex-col items-center
                     justify-center libre-baskerville-regular right-0 top-1/4 -mr-px">
 
-                        <div className="flex items-center justify-center bg-black/60 text-white backdrop-blur-sm py-3 px-2 mb-2
-                        rounded-l-xl hover:bg-white hover:text-black transition
-                        border-l border-t border-b border-white/20 cursor-pointer"
-                            onClick={()=>{removeFocusOnBackPress()}}
-                        >
-                            <IoMdClose size={14}/>
-                        </div>
-
                         <div className="flex items-center justify-center bg-black/60 text-white backdrop-blur-sm py-3 px-2
                         rounded-l-xl hover:bg-white hover:text-black transition
                         border-l border-t border-b border-white/20 cursor-pointer"
-                            onClick={()=>{navigate(`/dashboard/${uid}`)}}
+                            onClick={(e) => { e.stopPropagation(); removeFocusOnBackPress(); }}
                         >
-                            <IoIosArrowForward size={14}/>
+                            <IoMdClose size={14}/>
                         </div>
 
                     </div>}
@@ -277,7 +295,8 @@ function UserCard({uid, showButtons}) {
                                 <div className={`${(copyStatus === "")?'bg-white/10 border border-white/20':((copyStatus === "Copied")?'bg-green-800/60 border border-green-500/30':'bg-red-800/60 border border-red-500/30')}
                                 afacad-bold text-white px-2.5 py-0.5 text-xs text-center rounded-full flex justify-center
                                 items-center cursor-copy transition`}
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                        e.stopPropagation();
                                         navigator.clipboard.writeText(uid)
                                         .then(() => {
                                             setCopyStatus("Copied");
@@ -325,7 +344,7 @@ function UserCard({uid, showButtons}) {
                             </>}
                         </div>
 
-                        <div className="mr-2">
+                        <div className="mr-2" onClick={(e) => e.stopPropagation()}>
                             <ExpandableRefreshButton
                                 onClick={() => upsertUserRequest(uid)}
                                 enabled={isRefreshPossible && isRefreshButtonActive}
