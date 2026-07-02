@@ -24,17 +24,12 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
 // Thunk to logout
 export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
     try {
-      // Ensure the XSRF-TOKEN cookie is set (CookieServerCsrfTokenRepository sets it on this request)
-      await axios.get(`${import.meta.env.VITE_AUTH_API_URL}/csrf-token`, {
+      // Fetch CSRF token — controller explicitly sets the XSRF-TOKEN cookie and also
+      // returns the token value in JSON, so we read from the response body.
+      const csrfRes = await axios.get(`${import.meta.env.VITE_AUTH_API_URL}/csrf-token`, {
         withCredentials: true,
       });
-
-      // Read token directly from cookie — CookieServerCsrfTokenRepository stores the raw
-      // token there; reading it here matches what Spring Security validates against the header.
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('XSRF-TOKEN='))
-        ?.split('=')[1];
+      const csrfToken = csrfRes.data?.token;
 
       await axios.post(
         `${import.meta.env.VITE_AUTH_API_URL}/logout`,
@@ -42,7 +37,7 @@ export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValu
         {
           withCredentials: true,
           headers: {
-            "X-XSRF-TOKEN": csrfToken ? decodeURIComponent(csrfToken) : '',
+            "X-XSRF-TOKEN": csrfToken ?? '',
           },
         }
       );
