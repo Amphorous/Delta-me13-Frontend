@@ -24,7 +24,7 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
 // Thunk to logout
 export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
     try {
-      const csrfRes = await axios.get(`${import.meta.env.VITE_AUTH_API_URL}/csrf-token`, {
+      const csrfRes = await axios.get(`${import.meta.env.VITE_AUTH_API_URL}/api/csrf-token`, {
         withCredentials: true,
       });
       const csrfToken = csrfRes.data?.token;
