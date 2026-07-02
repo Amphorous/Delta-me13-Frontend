@@ -24,8 +24,6 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
 // Thunk to logout
 export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
     try {
-      // Fetch CSRF token — controller explicitly sets the XSRF-TOKEN cookie and also
-      // returns the token value in JSON, so we read from the response body.
       const csrfRes = await axios.get(`${import.meta.env.VITE_AUTH_API_URL}/csrf-token`, {
         withCredentials: true,
       });
@@ -36,9 +34,7 @@ export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValu
         {},
         {
           withCredentials: true,
-          headers: {
-            "X-XSRF-TOKEN": csrfToken ?? '',
-          },
+          headers: { "X-XSRF-TOKEN": csrfToken ?? '' },
         }
       );
 
