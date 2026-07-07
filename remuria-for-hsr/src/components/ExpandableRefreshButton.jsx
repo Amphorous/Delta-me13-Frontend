@@ -18,6 +18,7 @@
  *   loading   boolean       true = spinning indicator while request is in flight.
  *   countdown number        Seconds shown in the disabled/cooldown state.
  *   label     string        Text shown on hover expand (default "Refresh").
+ *   icon      node          Trailing icon in the idle state (default <IoMdRefresh />).
  *
  * Visual states (in priority order):
  *   1. loading=true        → spinning icon, non-interactive
@@ -38,7 +39,7 @@ const FADE = {
     transition: { duration: 0.2, ease: 'easeInOut' },
 };
 
-function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown, label = "Refresh" }) {
+function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown, label = "Refresh", icon = <IoMdRefresh /> }) {
     const [hovered, setHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
     const measureRef = useRef(null);
@@ -115,7 +116,7 @@ function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown,
                                 </motion.span>
                             )}
                         </AnimatePresence>
-                        <IoMdRefresh />
+                        {icon}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -123,7 +124,7 @@ function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown,
             <div className="absolute invisible pointer-events-none h-0 overflow-hidden afacad-light">
                 <div ref={measureRef} className="flex items-center justify-center gap-1 px-2.5 py-0.5">
                     <span>{label}</span>
-                    <IoMdRefresh />
+                    {icon}
                 </div>
             </div>
         </>

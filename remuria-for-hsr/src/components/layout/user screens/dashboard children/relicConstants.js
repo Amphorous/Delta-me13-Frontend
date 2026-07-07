@@ -1,3 +1,22 @@
+import iconAttack from "../../../../assets/downloaded_icons/IconAttack.png"
+import iconBreakUp from "../../../../assets/downloaded_icons/IconBreakUp.png"
+import iconCriticalChance from "../../../../assets/downloaded_icons/IconCriticalChance.png"
+import iconCriticalDamage from "../../../../assets/downloaded_icons/IconCriticalDamage.png"
+import iconDefence from "../../../../assets/downloaded_icons/IconDefence.png"
+import iconFireAddedRatio from "../../../../assets/downloaded_icons/IconFireAddedRatio.png"
+import iconIceAddedRatio from "../../../../assets/downloaded_icons/IconIceAddedRatio.png"
+import iconImaginaryAddedRatio from "../../../../assets/downloaded_icons/IconImaginaryAddedRatio.png"
+import iconJoy from "../../../../assets/downloaded_icons/IconJoy.png"
+import iconMaxHP from "../../../../assets/downloaded_icons/IconMaxHP.png"
+import iconPhysicalAddedRatio from "../../../../assets/downloaded_icons/IconPhysicalAddedRatio.png"
+import iconQuantumAddedRatio from "../../../../assets/downloaded_icons/IconQuantumAddedRatio.png"
+import iconSpeed from "../../../../assets/downloaded_icons/IconSpeed.png"
+import iconStatusProbability from "../../../../assets/downloaded_icons/IconStatusProbability.png"
+import iconStatusResistance from "../../../../assets/downloaded_icons/IconStatusResistance.png"
+import iconThunderAddedRatio from "../../../../assets/downloaded_icons/IconThunderAddedRatio.png"
+import iconWindAddedRatio from "../../../../assets/downloaded_icons/IconWindAddedRatio.png"
+import iconSPRatio from "../../../../assets/downloaded_icons/IconSPRatio.png"
+
 export const STAT_ALIASES = [
   { labels: ['cv'],                                              type: 'CV',                         display: 'CV' },
   { labels: ['crit dmg', 'criticaldamage', 'cdmg', 'cd'],       type: 'CriticalDamageBase',         display: 'CRIT DMG' },
@@ -43,4 +62,44 @@ export function slotDisplayName(type) {
     case '6': return 'Rope';
     default: return type;
   }
+}
+
+// A relic tid segments into [ rarity+1, setId, position/type ]
+export function parseTid(tid) {
+  if (!tid) return null;
+  return [tid.substring(0, 1), tid.substring(1, tid.length - 1), tid.substring(tid.length - 1)];
+}
+
+export function relicPieceIconUrl(tid) {
+  const meta = parseTid(tid);
+  if (!meta) return null;
+  return `https://enka.network/ui/hsr/SpriteOutput/ItemIcon/RelicIcons/IconRelic_${meta[1]}_${meta[2]}.png`;
+}
+
+export function statIconGetter(statType) {
+  if (!statType) return undefined;
+  const t = statType.toLowerCase();
+  if (t.includes("attack")) return iconAttack;
+  else if (t.includes("break")) return iconBreakUp;
+  else if (t.includes("criticalchance")) return iconCriticalChance;
+  else if (t.includes("criticaldamage")) return iconCriticalDamage;
+  else if (t.includes("defence")) return iconDefence;
+  else if (t.includes("fireaddedratio")) return iconFireAddedRatio;
+  else if (t.includes("iceaddedratio")) return iconIceAddedRatio;
+  else if (t.includes("imaginaryaddedratio")) return iconImaginaryAddedRatio;
+  else if (t.includes("joy")) return iconJoy;
+  else if (t.includes("hp")) return iconMaxHP;
+  else if (t.includes("physicaladdedratio")) return iconPhysicalAddedRatio;
+  else if (t.includes("quantumaddedratio")) return iconQuantumAddedRatio;
+  else if (t.includes("speed")) return iconSpeed;
+  else if (t.includes("statusprobability")) return iconStatusProbability;
+  else if (t.includes("statusresistance")) return iconStatusResistance;
+  else if (t.includes("thunderaddedratio")) return iconThunderAddedRatio;
+  else if (t.includes("windaddedratio")) return iconWindAddedRatio;
+  else if (t.includes("heal")) return iconMaxHP;
+  else if (t.includes("sp")) return iconSPRatio;
+}
+
+export function characterIconUrl(avatarId) {
+  return `https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/Avatar/${avatarId}.png`;
 }
