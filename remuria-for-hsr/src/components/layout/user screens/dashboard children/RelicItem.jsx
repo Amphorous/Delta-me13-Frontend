@@ -10,28 +10,11 @@ import bodyIcon from "../../../../assets/relicIcons/IconRelicBody.png"
 import footIcon from "../../../../assets/relicIcons/IconRelicFoot.png"
 import neckIcon from "../../../../assets/relicIcons/IconRelicNeck.png"
 import goodsIcon from "../../../../assets/relicIcons/IconRelicGoods.png"
-import iconAttack from "../../../../assets/downloaded_icons/IconAttack.png"
-import iconBreakUp from "../../../../assets/downloaded_icons/IconBreakUp.png"
-import iconCriticalChance from "../../../../assets/downloaded_icons/IconCriticalChance.png"
-import iconCriticalDamage from "../../../../assets/downloaded_icons/IconCriticalDamage.png"
-import iconDefence from "../../../../assets/downloaded_icons/IconDefence.png"
-import iconFireAddedRatio from "../../../../assets/downloaded_icons/IconFireAddedRatio.png"
-import iconIceAddedRatio from "../../../../assets/downloaded_icons/IconIceAddedRatio.png"
-import iconImaginaryAddedRatio from "../../../../assets/downloaded_icons/IconImaginaryAddedRatio.png"
-import iconJoy from "../../../../assets/downloaded_icons/IconJoy.png"
-import iconMaxHP from "../../../../assets/downloaded_icons/IconMaxHP.png"
-import iconPhysicalAddedRatio from "../../../../assets/downloaded_icons/IconPhysicalAddedRatio.png"
-import iconQuantumAddedRatio from "../../../../assets/downloaded_icons/IconQuantumAddedRatio.png"
-import iconSpeed from "../../../../assets/downloaded_icons/IconSpeed.png"
-import iconStatusProbability from "../../../../assets/downloaded_icons/IconStatusProbability.png"
-import iconStatusResistance from "../../../../assets/downloaded_icons/IconStatusResistance.png"
-import iconThunderAddedRatio from "../../../../assets/downloaded_icons/IconThunderAddedRatio.png"
-import iconWindAddedRatio from "../../../../assets/downloaded_icons/IconWindAddedRatio.png"
-import iconSPRatio from "../../../../assets/downloaded_icons/IconSPRatio.png"
 import { useSelector } from "react-redux";
 import { selectLoc } from '../../../../store/localisationSlice';
 import { selectRelicAnimations, selectRelicShowCV } from '../../../../store/settingsSlice';
 import axios from 'axios';
+import { statIconGetter, parseTid, relicPieceIconUrl, characterIconUrl } from './relicConstants';
 
 function statNameGetter(statType) {
     if (!statType) return '';
@@ -157,9 +140,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
 
 
     function imageGetter(){
-        if(relicMetaInfo){
-            return `https://enka.network/ui/hsr/SpriteOutput/ItemIcon/RelicIcons/IconRelic_${relicMetaInfo[1]}_${relicMetaInfo[2]}.png`
-        }
+        return relicPieceIconUrl(info?.relic?.tid);
     }
 
     function relicIconGetter(){
@@ -177,11 +158,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
 
     useEffect(()=>{
         if(info){
-            //console.log("relic info: ",info.relic)
-            let metaString = info.relic.tid;
-            let metaArray = [ metaString.substring(0,1), metaString.substring(1, metaString.length-1), metaString.substring(metaString.length-1) ]
-            //console.log("RELIC meta info: ", metaArray);
-            setRelicMetaInfo(metaArray);
+            setRelicMetaInfo(parseTid(info.relic.tid));
         }
     }, [info])
 
@@ -230,28 +207,6 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
         } else{
             setHoveredRelicRarity(true)
         }
-    }
-
-    function statImageGetter(statType){
-        if(statType.toLowerCase().includes("attack")) return iconAttack
-        else if(statType.toLowerCase().includes("break")) return iconBreakUp
-        else if(statType.toLowerCase().includes("criticalchance")) return iconCriticalChance
-        else if(statType.toLowerCase().includes("criticaldamage")) return iconCriticalDamage
-        else if(statType.toLowerCase().includes("defence")) return iconDefence
-        else if(statType.toLowerCase().includes("fireaddedratio")) return iconFireAddedRatio
-        else if(statType.toLowerCase().includes("iceaddedratio")) return iconIceAddedRatio
-        else if(statType.toLowerCase().includes("imaginaryaddedratio")) return iconImaginaryAddedRatio
-        else if(statType.toLowerCase().includes("joy")) return iconJoy
-        else if(statType.toLowerCase().includes("hp")) return iconMaxHP
-        else if(statType.toLowerCase().includes("physicaladdedratio")) return iconPhysicalAddedRatio
-        else if(statType.toLowerCase().includes("quantumaddedratio")) return iconQuantumAddedRatio
-        else if(statType.toLowerCase().includes("speed")) return iconSpeed
-        else if(statType.toLowerCase().includes("statusprobability")) return iconStatusProbability
-        else if(statType.toLowerCase().includes("statusresistance")) return iconStatusResistance
-        else if(statType.toLowerCase().includes("thunderaddedratio")) return iconThunderAddedRatio
-        else if(statType.toLowerCase().includes("windaddedratio")) return iconWindAddedRatio
-        else if(statType.toLowerCase().includes("heal")) return iconMaxHP
-        else if(statType.toLowerCase().includes("sp")) return iconSPRatio
     }
 
     function statValueGetter(statValue, statType){
@@ -347,7 +302,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
                                     return (
                                         <div key={i} className='flex items-center gap-2'>
                                             <img
-                                                src={`https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/Avatar/${avatarId}.png`}
+                                                src={characterIconUrl(avatarId)}
                                                 alt=""
                                                 className='w-7 h-7 rounded-full border border-white/20 object-cover shrink-0'
                                                 onError={e => { e.currentTarget.style.display = 'none'; }}
@@ -392,7 +347,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
 
                             <div className='h-[5%] text-center text-white afacad-bold text-sm my-1'>+{`${(info.relic.level === "null" ? 0 : info.relic.level)}`}</div>
                             <div className='h-full w-full mt-1 flex flex-col items-center justify-center rounded-md'>
-                                <img src={`${statImageGetter(info.relic.mainType)}`} alt=";(" className="aspect-square w-1/2 mb-3 object-contain " />
+                                <img src={`${statIconGetter(info.relic.mainType)}`} alt=";(" className="aspect-square w-1/2 mb-3 object-contain " />
                                 {statValueGetter(info.relic.mainValue, info.relic.mainType)}
                             </div>
 
@@ -412,7 +367,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
                                                 onMouseEnter={e => showStatTooltip(e, sub.type)}
                                                 onMouseLeave={() => setHoveredStat(null)}
                                             >
-                                                <img src={`${statImageGetter(sub.type)}`} alt=";(" className="aspect-square h-1/2 object-contain mx-3" />
+                                                <img src={`${statIconGetter(sub.type)}`} alt=";(" className="aspect-square h-1/2 object-contain mx-3" />
                                                 {statValueGetter(sub.value, sub.type)}
                                             </div>
                                         </> : <>

@@ -14,7 +14,6 @@ function Tab({children, icon, setPosition, selectedTab, setSelectedTab, hoveredT
 
     useEffect(()=>{
         if (!ref.current) return;
-        if((children !== selectedTab) && (selectedTab !== "")) return;
         if(selectedTab === ""){
             setPosition((prev)=>({
                 ...prev,
@@ -22,13 +21,29 @@ function Tab({children, icon, setPosition, selectedTab, setSelectedTab, hoveredT
             }))
             return;
         }
+        if(children !== selectedTab) return;
 
-        const {width} = ref.current.getBoundingClientRect();
-        setPosition({
-            width,
-            opacity: 1,
-            left: ref.current.offsetLeft,
-        })
+        const update = () => {
+            if (!ref.current) return;
+            const {width} = ref.current.getBoundingClientRect();
+            setPosition({
+                width,
+                opacity: 1,
+                left: ref.current.offsetLeft,
+            })
+        };
+        update();
+
+        // Re-sync the cursor pill when layout settles after mount (late web
+        // fonts / dev stylesheet injection) — a one-shot measurement taken
+        // before that leaves the pill with a stale width/left until the next
+        // hover. Observing the parent too catches this tab *shifting* because
+        // a sibling resized (position changes alone don't fire an observer on
+        // this element).
+        const observer = new ResizeObserver(update);
+        observer.observe(ref.current);
+        if (ref.current.parentElement) observer.observe(ref.current.parentElement);
+        return () => observer.disconnect();
     }, [selectedTab])
 
   return (

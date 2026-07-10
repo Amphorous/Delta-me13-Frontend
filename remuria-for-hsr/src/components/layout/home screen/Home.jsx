@@ -198,7 +198,7 @@ function Home() {
       } */}
 
       {focusedUser?.uid !== "" && localUsers.some(u => u.uid === focusedUser?.uid) && requiredWidth > 0 ? (
-        <div className="flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth }}>
+        <div className="isolate flex items-center justify-center mx-5 h-full" style={{ width: requiredWidth }}>
 
           <UserCard uid={focusedUser?.uid} showButtons={true}/>
 

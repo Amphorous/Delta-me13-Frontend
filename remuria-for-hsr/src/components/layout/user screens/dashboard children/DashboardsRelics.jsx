@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import React, { useEffect, useRef, useState } from 'react'
 import { useLocation, useOutletContext } from 'react-router';
@@ -21,6 +22,7 @@ import bodyIcon from "../../../../assets/relicIcons/IconRelicBody.png"
 import footIcon from "../../../../assets/relicIcons/IconRelicFoot.png"
 import neckIcon from "../../../../assets/relicIcons/IconRelicNeck.png"
 import goodsIcon from "../../../../assets/relicIcons/IconRelicGoods.png"
+import loadFail from "../../../../assets/Loading Failed.png"
 
 const SLOT_OPTIONS = [
   { label: 'Head',   value: '1', icon: headIcon },
@@ -638,9 +640,18 @@ function DashboardsRelics() {
           style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(22rem, 1fr))' }}
         >
           {relicsInfo === null
-            ? Array.from({ length: 6 }).map((_, i) => <RelicSkeleton key={i} />)
+            ? Array.from({ length: 18 }).map((_, i) => <RelicSkeleton key={i} />)
             : (relicsInfo === "error"
-              ? <div className="rounded-lg bg-red-900/40 border border-red-500/30 h-24 flex items-center justify-center text-red-400 afacad-bold text-sm col-span-full">Failed to load</div>
+              ? <div className="col-span-full h-full flex items-center justify-center backdrop-blur-md border border-red-500 rounded-2xl afacad-bold text-white [container-type:size] bg-black/70 overflow-clip">
+                  <motion.img
+                    src={loadFail}
+                    alt='Failed to load relics'
+                    className='w-full object-contain'
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1.5 }}
+                  />
+                </div>
               : relicsInfo.map((record, index) => (
                 <div key={index} className="aspect-[3/2]">
                   <RelicItem info={record} relicIndex={(relicPageNumber - 1) * 20 + index + 1} onStatClick={handleStatClick} sortBy={sortBy} onFilterClick={handleFilterClick} activeFilter={filter} activeTypeFilter={typeFilter} />
@@ -662,7 +673,16 @@ function DashboardsRelics() {
                   ))}
                 </div>
               : relicsInfo === "error"
-                ? <div className="rounded-lg bg-red-900/40 border border-red-500/30 h-24 flex items-center justify-center text-red-400 afacad-bold text-sm">Failed to load</div>
+                ? <div className="h-full flex items-center justify-center backdrop-blur-md border border-red-500 rounded-2xl afacad-bold text-white [container-type:size] bg-black/70 overflow-clip">
+                    <motion.img
+                      src={loadFail}
+                      alt='Failed to load relics'
+                      className='w-full object-contain'
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 1.5 }}
+                    />
+                  </div>
                 : <RelicList info={relicsInfo} relicPageNumber={relicPageNumber} twoColumn={twoColumn} showCV={showCV} cvShimmer={cvShimmer} onStatClick={handleStatClick} sortBy={sortBy} onFilterClick={handleFilterClick} activeFilter={filter} activeTypeFilter={typeFilter} />
             }
           </div>

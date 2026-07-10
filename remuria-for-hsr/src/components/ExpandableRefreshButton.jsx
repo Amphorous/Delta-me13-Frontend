@@ -18,6 +18,7 @@
  *   loading   boolean       true = spinning indicator while request is in flight.
  *   countdown number        Seconds shown in the disabled/cooldown state.
  *   label     string        Text shown on hover expand (default "Refresh").
+ *   icon      node          Trailing icon in the idle state (default <IoMdRefresh />).
  *
  * Visual states (in priority order):
  *   1. loading=true        → spinning icon, non-interactive
@@ -38,7 +39,7 @@ const FADE = {
     transition: { duration: 0.2, ease: 'easeInOut' },
 };
 
-function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown, label = "Refresh" }) {
+function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown, label = "Refresh", icon = <IoMdRefresh /> }) {
     const [hovered, setHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
     const measureRef = useRef(null);
@@ -46,10 +47,19 @@ function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown,
     const [showDone, setShowDone] = useState(false);
     const prevLoading = useRef(loading);
 
+    // Keep the measurement live rather than one-shot: the hidden div's width
+    // changes after mount when the web fonts finish loading (or, in dev, when
+    // the stylesheet is injected after the component mounted). A single mount-time
+    // snapshot taken during that window captures a garbage width — e.g. the
+    // parent's full width — and the hover expand then animates to it.
     useLayoutEffect(() => {
-        if (measureRef.current) {
-            setExpandedWidth(measureRef.current.offsetWidth);
-        }
+        const el = measureRef.current;
+        if (!el) return;
+        const update = () => setExpandedWidth(el.offsetWidth);
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+        return () => observer.disconnect();
     }, [label]);
 
     useEffect(() => {
@@ -115,7 +125,7 @@ function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown,
                                 </motion.span>
                             )}
                         </AnimatePresence>
-                        <IoMdRefresh />
+                        {icon}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -123,7 +133,7 @@ function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown,
             <div className="absolute invisible pointer-events-none h-0 overflow-hidden afacad-light">
                 <div ref={measureRef} className="flex items-center justify-center gap-1 px-2.5 py-0.5">
                     <span>{label}</span>
-                    <IoMdRefresh />
+                    {icon}
                 </div>
             </div>
         </>

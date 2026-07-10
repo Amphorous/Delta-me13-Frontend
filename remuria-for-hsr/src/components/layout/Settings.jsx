@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IoIosArrowDown } from 'react-icons/io';
+import { IoIosArrowDown, IoIosArrowBack } from 'react-icons/io';
 import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth, selectBgBlur } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 import { selectLoc, setLoc } from '../../store/localisationSlice';
@@ -474,10 +475,19 @@ function SettingsWidthSelector() {
 function Settings() {
     const widthKey = useSelector(selectSettingsWidth);
     const cardMaxW = WIDTH_CLASSES[widthKey] ?? WIDTH_CLASSES.sm;
+    const navigate = useNavigate();
 
     return (
         <div className='w-full h-full overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/35 flex justify-center p-6'>
             <div className={`w-full ${cardMaxW} self-start bg-gray-900/60 backdrop-blur-md border border-white/10 rounded-2xl px-8 py-6 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/35`}>
+
+                <button
+                    onClick={() => navigate(-1)}
+                    className='flex items-center gap-1.5 mb-4 text-white/50 hover:text-white transition-colors afacad-semi-bold text-sm cursor-pointer'
+                >
+                    <IoIosArrowBack size={16} />
+                    Back
+                </button>
 
                 <p className='libre-baskerville-bold text-white mb-1' style={{ fontSize: 'clamp(1.8rem, 3vw, 2.5rem)' }}>
                     Settings

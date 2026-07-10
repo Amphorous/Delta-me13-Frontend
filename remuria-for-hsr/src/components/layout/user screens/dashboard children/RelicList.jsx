@@ -28,7 +28,7 @@ import iconThunderAddedRatio from "../../../../assets/downloaded_icons/IconThund
 import iconWindAddedRatio from "../../../../assets/downloaded_icons/IconWindAddedRatio.png"
 import iconSPRatio from "../../../../assets/downloaded_icons/IconSPRatio.png"
 
-const SHIMMER_CSS = `
+export const SHIMMER_CSS = `
 @keyframes cv-shimmer-sweep {
     0%   { background-position: 200% center; }
     100% { background-position: -200% center; }

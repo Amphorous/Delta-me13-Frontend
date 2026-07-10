@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { fetchCsrfToken } from "../utils/csrf";
 
 // Thunk to check auth status
 export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
@@ -24,10 +25,7 @@ export const checkAuth = createAsyncThunk("auth/checkAuth", async () => {
 // Thunk to logout
 export const logout = createAsyncThunk("auth/logout", async (_, { rejectWithValue }) => {
     try {
-      const csrfRes = await axios.get(`${import.meta.env.VITE_AUTH_API_URL}/api/csrf-token`, {
-        withCredentials: true,
-      });
-      const csrfToken = csrfRes.data?.token;
+      const csrfToken = await fetchCsrfToken();
 
       await axios.post(
         `${import.meta.env.VITE_AUTH_API_URL}/logout`,
