@@ -642,7 +642,7 @@ function DashboardsRelics() {
           {relicsInfo === null
             ? Array.from({ length: 18 }).map((_, i) => <RelicSkeleton key={i} />)
             : (relicsInfo === "error"
-              ? <div className="col-span-full h-24 flex items-center justify-center backdrop-blur-md border border-red-500 rounded-2xl afacad-bold text-white [container-type:size] bg-black/70 overflow-clip">
+              ? <div className="col-span-full h-full flex items-center justify-center backdrop-blur-md border border-red-500 rounded-2xl afacad-bold text-white [container-type:size] bg-black/70 overflow-clip">
                   <motion.img
                     src={loadFail}
                     alt='Failed to load relics'
@@ -673,7 +673,7 @@ function DashboardsRelics() {
                   ))}
                 </div>
               : relicsInfo === "error"
-                ? <div className="h-24 flex items-center justify-center backdrop-blur-md border border-red-500 rounded-2xl afacad-bold text-white [container-type:size] bg-black/70 overflow-clip">
+                ? <div className="h-full flex items-center justify-center backdrop-blur-md border border-red-500 rounded-2xl afacad-bold text-white [container-type:size] bg-black/70 overflow-clip">
                     <motion.img
                       src={loadFail}
                       alt='Failed to load relics'

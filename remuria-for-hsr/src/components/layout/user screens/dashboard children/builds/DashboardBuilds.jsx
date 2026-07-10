@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useOutletContext } from 'react-router';
 import { useSelector } from 'react-redux';
@@ -6,7 +6,8 @@ import { MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck, MdClose } from 'rea
 import { CgSpinner } from 'react-icons/cg';
 import BuildScrollList from './BuildScrollList';
 import BuildDetailCard from './BuildDetailCard';
-import { getBuilds, getAllBuilds, createBuild, renameBuild, deleteBuild, hideBuild } from '../../../../../utils/buildsApi';
+import BuildManageModal from './BuildManageModal';
+import { getBuilds, createBuild, renameBuild, deleteBuild, hideBuild } from '../../../../../utils/buildsApi';
 import { getThemeBgColor } from '../../../../../utils/themeColors';
 import { characterIconUrl, displayBuildName } from './buildConstants';
 import loadFail from '../../../../../assets/Loading Failed.png';
@@ -14,15 +15,7 @@ import loadFail from '../../../../../assets/Loading Failed.png';
 // Widths of the two Builds-tab panels — edit either independently to try different
 // splits. Any leftover space between them (if the two don't add up to the full row)
 // is just empty gap; `justify-between` below pins the strip left and the card right.
-const SCROLL_STRIP_WIDTH = '18%';
 const DETAIL_CARD_WIDTH = '75%';
-
-function applyClientFilterSort(list, filterByAvatarId, order) {
-  let result = list;
-  if (filterByAvatarId) result = result.filter(b => b.avatarId === filterByAvatarId);
-  result = [...result].sort((a, b) => order === 'ASC' ? (a.cv ?? 0) - (b.cv ?? 0) : (b.cv ?? 0) - (a.cv ?? 0));
-  return result;
-}
 
 function DashboardBuilds() {
   const uid = useLocation().pathname.split("/")[2];
@@ -35,7 +28,7 @@ function DashboardBuilds() {
   const [page, setPage] = useState(1);
   const [sortOrder, setSortOrder] = useState('DESC');
   const [filterByAvatarId, setFilterByAvatarId] = useState(null);
-  const [manageMode, setManageMode] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
   const [buildsInfo, setBuildsInfo] = useState(null);
   const [hasMore, setHasMore] = useState(false);
 
@@ -43,23 +36,39 @@ function DashboardBuilds() {
   const [mutatingState, setMutatingState] = useState(null);
   const [mutationError, setMutationError] = useState(null);
 
+  // Debounced focus: while the user flings through the scroll strip the focused
+  // index rapid-fires, and re-rendering the detail card (cutin swap, gradient
+  // extraction) for every intermediate character is wasted churn. Only commit a
+  // focus to the card once it has held still for FOCUS_SETTLE_MS. useCallback
+  // keeps the handler's identity stable so BuildScrollList's focus-report
+  // effect doesn't re-fire (and restart the timer) on unrelated re-renders here.
+  const FOCUS_SETTLE_MS = 200;
+  const focusSettleTimer = useRef(null);
+  const handleFocusChange = useCallback((build) => {
+    if (focusSettleTimer.current) clearTimeout(focusSettleTimer.current);
+    focusSettleTimer.current = setTimeout(() => setFocusedBuild(build), FOCUS_SETTLE_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(focusSettleTimer.current), []);
+
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameText, setRenameText] = useState('');
   const [showCreatePrompt, setShowCreatePrompt] = useState(false);
   const [createText, setCreateText] = useState('');
 
+  // avatarId -> index into getSkinList(avatarInfo). Lives here (not in the scroll
+  // item) so the strip icon and the detail card's icon/cutin stay in sync.
+  const [skinSelections, setSkinSelections] = useState({});
+  function cycleSkin(avatarId, skinCount) {
+    if (!skinCount || skinCount < 2) return;
+    setSkinSelections(prev => ({ ...prev, [avatarId]: ((prev[avatarId] ?? 0) + 1) % skinCount }));
+  }
+
   async function loadBuilds() {
     setBuildsInfo(null);
     try {
-      if (manageMode && isOwnUid) {
-        const data = await getAllBuilds(uid);
-        setBuildsInfo(applyClientFilterSort(Array.isArray(data) ? data : [], filterByAvatarId, sortOrder));
-        setHasMore(false);
-      } else {
-        const data = await getBuilds(uid, page, { filterByAvatarId, order: sortOrder });
-        setBuildsInfo(data.builds || []);
-        setHasMore(!!data.hasMore);
-      }
+      const data = await getBuilds(uid, page, { filterByAvatarId, order: sortOrder });
+      setBuildsInfo(data.builds || []);
+      setHasMore(!!data.hasMore);
     } catch {
       setBuildsInfo('error');
       setHasMore(false);
@@ -69,10 +78,10 @@ function DashboardBuilds() {
   useEffect(() => {
     loadBuilds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid, page, sortOrder, filterByAvatarId, refreshKey, manageMode, isOwnUid]);
+  }, [uid, page, sortOrder, filterByAvatarId, refreshKey]);
 
-  const canGoPrev = !manageMode && page > 1;
-  const canGoNext = !manageMode && hasMore;
+  const canGoPrev = page > 1;
+  const canGoNext = hasMore;
 
   function handlePageChange(direction) {
     if (direction === -1 && canGoPrev) setPage(page - 1);
@@ -151,7 +160,7 @@ function DashboardBuilds() {
               <MdKeyboardArrowLeft size={14} />
             </button>
             <span className='text-white afacad-bold text-xs tabular-nums min-w-[1.5rem] text-center select-none'>
-              {manageMode ? 'All' : page}
+              {page}
             </span>
             <button onClick={() => handlePageChange(1)}
               disabled={!canGoNext}
@@ -184,9 +193,9 @@ function DashboardBuilds() {
 
             {isOwnUid && (
               <button
-                onClick={() => setManageMode(m => !m)}
-                className={`afacad-bold text-xs px-1.5 py-0.5 rounded transition ${manageMode ? 'text-[var(--accent-muted)] bg-[var(--accent-bg-20)]' : 'text-gray-500 hover:text-gray-300'}`}
-                title="Toggle manage mode (shows hidden builds)"
+                onClick={() => setShowManageModal(true)}
+                className='afacad-bold text-xs px-1.5 py-0.5 rounded transition text-gray-500 hover:text-gray-300'
+                title="Manage builds (rename, delete, hide)"
               >
                 Manage
               </button>
@@ -264,13 +273,14 @@ function DashboardBuilds() {
             {/* -ml-8 cancels the ambient px-4 from both Dashboard.jsx and this tab's
                 own content padding, so the strip's left edge sits flush against the
                 true window border (the "chord" the arc curve is drawn against). */}
-            <div className='bg-amber-400 shrink-0 h-full -ml-8 ' 
-             style={{ width: SCROLL_STRIP_WIDTH }}
+            <div className='bg-amdber-400 shrink-0 h-full w-[20%] min-w-[399px] -ml-10 ' 
             >
               <BuildScrollList
                 builds={buildsInfo}
-                onFocusChange={(build) => setFocusedBuild(build)}
+                onFocusChange={handleFocusChange}
                 onCharacterFilterClick={handleCharacterFilterClick}
+                skinSelections={skinSelections}
+                onCycleSkin={cycleSkin}
               />
             </div>
             <div className='shrink-0 h-full' style={{ width: DETAIL_CARD_WIDTH }}>
@@ -282,12 +292,21 @@ function DashboardBuilds() {
                 onHide={handleHideRequest}
                 onCreate={() => { setShowCreatePrompt(true); setCreateText(''); }}
                 mutating={mutatingState}
+                skinIndex={skinSelections[focusedBuild?.avatarId] ?? 0}
               />
             </div>
           </div>
 
         )}
       </div>
+
+      {showManageModal && (
+        <BuildManageModal
+          uid={uid}
+          onClose={() => setShowManageModal(false)}
+          onMutated={() => { loadBuilds(); bumpRefresh?.(); }}
+        />
+      )}
     </div>
   );
 }

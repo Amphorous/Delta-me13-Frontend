@@ -1,20 +1,91 @@
-import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { LuSword, LuUsersRound } from 'react-icons/lu';
-import { MdEdit, MdDeleteOutline, MdVisibilityOff, MdVisibility, MdAdd } from 'react-icons/md';
-import ExpandableRefreshButton from '../../../../ExpandableRefreshButton';
-import { selectLoc } from '../../../../../store/localisationSlice';
-import { characterIconUrl, relicPieceIconUrl, deriveDisplayStats, displayBuildName, fetchStatNames } from './buildConstants';
+import { useEffect, useRef, useState } from 'react';
+import { LuUsersRound } from 'react-icons/lu';
+import { CgSpinner } from 'react-icons/cg';
+import tinycolor from 'tinycolor2';
+import { characterIconUrl, enkaUiUrl, getSkinList } from './buildConstants';
+import useCutinGradient from './useCutinGradient';
 
-function BuildDetailCard({ build, isOwnUid, onRename, onDelete, onHide, onCreate, mutating }) {
-  const selectedLoc = useSelector(selectLoc);
-  const [statNames, setStatNames] = useState(null);
+// Neutral placeholder while the cutin's gradient is still being sampled (or
+// there's no cutin to sample at all) — same 4-stop shape as the real thing,
+// just desaturated, so there's no flash-of-different-layout on load.
+const FALLBACK_GRADIENT_STOPS = ['#3f3f46', '#27272a', '#18181b', '#09090b'];
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchStatNames(selectedLoc).then((names) => { if (!cancelled) setStatNames(names); });
-    return () => { cancelled = true; };
-  }, [selectedLoc]);
+// Cutins whose art places the character off-centre in the frame — nudge the
+// splash so the character actually lands on the visible strip (higher % =
+// further right, default 7.5% = centre of the uncovered strip).
+// Full literal Tailwind classes (not interpolated values): the scanner only
+// generates CSS for class names it can find verbatim in the source.
+const CUTIN_LEFT_DEFAULT = 'left-[7.5%]';
+const CUTIN_LEFT_BY_AVATAR = {
+  1106: 'left-[12.5%]',
+  1301: 'left-[4%]',
+  1407: 'left-[11.5%]',
+  1408: 'left-[9.5%]',
+  1414: 'left-[9%]',
+  1502: 'left-[11.5%]',
+};
+
+// Hand-picked gradients (4 stops, left -> right) for characters whose palette
+// the extractor can't get right by construction. Phainon (1408) is
+// near-monochrome white/gray: the vibrancy vote deliberately filters out all
+// neutrals (they carry no hue), so the only pixels left voting are his warm
+// skin shading — and the saturation floor in useCutinGradient then amplified
+// that into reddish orange. No weighting tweak fixes "the character's
+// identity colour IS a neutral", so these skip extraction entirely.
+const GRADIENT_OVERRIDE_BY_AVATAR = {
+  1220: ['#2fb8a8', '#1f8d84', '#12615e', '#073634'], // turquoise green-blue
+  1301: ['#6b1f2a', '#4a141d', '#2a0a10', '#080304'], // deep wine red -> black
+  1408: ['#94a3b8', '#475569', '#1e293b', '#020617'], // cool gray -> black
+  1415: ['#16245c', '#3f2b7d', '#83377f', '#c25585'], // deep blue -> pink
+};
+
+// Post-extraction tone adjustments for characters whose extracted HUE is right
+// but the tone is off — full overrides above are for when the hue itself is
+// wrong. Applied per stop to the sampled gradient.
+const GRADIENT_ADJUST_BY_AVATAR = {
+  1412: { saturate: 10, darken: 8 }, // deeper and darker
+  1506: { darken: 16 },              // considerably darken
+};
+
+function BuildDetailCard({ build, skinIndex = 0 }) {
+  const captureRef = useRef(null);
+
+  // Skin selection (cycled from the scroll item's shirt toggle, state lives in
+  // DashboardBuilds). Index 0 = default look. Falls back to the character's
+  // plain icon when there's no cutin art for the selected skin, so there's
+  // always something to render/sample a gradient from — build.avatarInfo can
+  // be absent entirely (enrichment is best-effort), so every read here is
+  // optional-chained rather than assuming the shape is always fully populated.
+  const skins = build ? getSkinList(build.avatarInfo) : [];
+  const activeSkin = skins[skinIndex % (skins.length || 1)] ?? null;
+  const avatarIconSrc = build && (skinIndex > 0 && activeSkin?.sideIcon)
+    ? enkaUiUrl(activeSkin.sideIcon)
+    : build ? characterIconUrl(build.avatarId) : null;
+  const cutinSrc = (activeSkin && enkaUiUrl(activeSkin.cutin)) ?? avatarIconSrc;
+
+  // Gradient samples the avatar ICON, not the cutin splash: cutin art often
+  // centres decorative environment effects (Castorice's skin has a golden
+  // lantern glow dead-centre) that out-vote the character's own colours even
+  // with centre-weighted extraction. The round/side icon crops tight on the
+  // character, so its vote reflects their identity colours — same source
+  // family the scroll strip samples, which gets these colours right.
+  // Overridden avatars skip sampling entirely (null src is the hook's no-op),
+  // but the hook itself is still called unconditionally to keep hook order stable.
+  const overrideStops = GRADIENT_OVERRIDE_BY_AVATAR[build?.avatarId] ?? null;
+  const extractedStops = useCutinGradient(overrideStops ? null : avatarIconSrc);
+  const adjust = GRADIENT_ADJUST_BY_AVATAR[build?.avatarId];
+  const adjustedStops = (adjust && extractedStops)
+    ? extractedStops.map((stop) => {
+        let c = tinycolor(stop);
+        if (adjust.saturate) c = c.saturate(adjust.saturate);
+        if (adjust.darken) c = c.darken(adjust.darken);
+        return c.toHexString();
+      })
+    : extractedStops;
+  const gradientStops = overrideStops ?? adjustedStops ?? FALLBACK_GRADIENT_STOPS;
+  const gradientCss = `linear-gradient(to right, ${gradientStops.join(', ')})`;
+
+  const cutinLeftClass = CUTIN_LEFT_BY_AVATAR[build?.avatarId] ?? CUTIN_LEFT_DEFAULT;
 
   useEffect(() => {
     if (build) {
@@ -31,112 +102,55 @@ function BuildDetailCard({ build, isOwnUid, onRename, onDelete, onHide, onCreate
     );
   }
 
-  const relics = build.relicNodes || [];
-  const displayStats = deriveDisplayStats(build.fightProps?.stats, statNames);
-  const weapon = build.equipsWeapon;
-
-  const setCounts = {};
-  relics.forEach((r) => { if (r.setName) setCounts[r.setName] = (setCounts[r.setName] || 0) + 1; });
-  const activeSets = Object.entries(setCounts).filter(([, count]) => count >= 2);
-
-  const buildLabel = displayBuildName(build.buildName) ?? (build.isStatic ? 'Current Build' : 'Build');
-  const mutatingAction = mutating?.key === `${build.avatarId}:${build.buildName}` ? mutating.action : null;
-
   return (
-    <div className='w-full h-full flex flex-col overflow-hidden bg-gray-400'>
-      <div className='flex items-center gap-4 p-5 shrink-0'>
-        <img
-          src={characterIconUrl(build.avatarId)}
-          alt=""
-          className='w-20 h-20 rounded-full object-cover shrink-0'
-          onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
-        />
-        <div className='flex flex-col min-w-0 flex-1'>
-          <span className='text-xl truncate'>{buildLabel}</span>
-          <span className='text-sm'>Lv. {build.level ?? '?'}</span>
-        </div>
-        <span className='shrink-0 text-2xl tabular-nums'>{(build.cv ?? 0).toFixed(1)}</span>
-      </div>
-
-      <div className='flex-1 min-h-0 overflow-y-auto p-5'>
-        {weapon?.weaponNode && (
-          <div className='flex items-center gap-2 mb-4 text-sm'>
-            <LuSword size={18} />
-            <span>Lv.{weapon.weaponLevel} · Refinement {weapon.weaponRefinement}</span>
-          </div>
-        )}
-
-        {relics.length > 0 && (
-          <div className='flex items-center gap-2 mb-4'>
-            {relics.map((relic) => (
-              <img
-                key={relic.id}
-                src={relicPieceIconUrl(relic.tid)}
-                alt=""
-                title={relic.setName}
-                className='w-9 h-9 object-contain'
-                onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
-              />
-            ))}
-          </div>
-        )}
-
-        {activeSets.length > 0 && (
-          <div className='flex flex-col gap-0.5 mb-4'>
-            {activeSets.map(([name, count]) => (
-              <span key={name} className='text-xs'>
-                {count >= 4 ? '4pc' : '2pc'} {name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className='grid grid-cols-2 gap-x-6 gap-y-1.5'>
-          {displayStats.map(({ type, label, value }) => (
-            <div key={type} className='flex items-center justify-between text-sm'>
-              <span>{label}</span>
-              <span>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {isOwnUid && (
-        <div className='relative flex items-center gap-2 p-4 shrink-0'>
-          {!build.isStatic && (
-            <>
-              <ExpandableRefreshButton
-                label="Rename"
-                icon={<MdEdit />}
-                enabled={true}
-                loading={mutatingAction === 'rename'}
-                onClick={() => onRename?.(build)}
-              />
-              <ExpandableRefreshButton
-                label="Delete"
-                icon={<MdDeleteOutline />}
-                enabled={true}
-                loading={mutatingAction === 'delete'}
-                onClick={() => onDelete?.(build)}
-              />
-            </>
+    // Outer wrapper is a size query container so the card inside can lock to
+    // 21:10 while contain-fitting the available space: width is the smaller of
+    // the full container width (100cqw) and the width at which a 21:10 box
+    // exactly fills the height (100cqh × 2.1 = 210cqh). Reshaping the window
+    // then scales the whole card uniformly instead of misaligning the interior.
+    <div className='w-full h-full flex items-center justify-center [container-type:size]'>
+      {/* id/ref are the future screenshot-download hook point. Deliberately no
+          CSS background-image anywhere in this tree (the gradient is the only
+          exception, as a plain colour-stop fill) — canvas-capture libraries
+          (html2canvas, dom-to-image) frequently drop or blank real image
+          background-images, so the cutin below is a plain <img crossOrigin>
+          instead, which those libraries rasterize reliably. */}
+      <div
+        ref={captureRef}
+        id="build-detail-card"
+        className='relative aspect-[21/10] w-[min(100cqw,210cqh)] flex overflow-hidden rounded-3xl ring-1 ring-white/10'
+        style={{ background: gradientCss }}
+      >
+        {/* cutin art, centered on the empty strip the info panel leaves
+            uncovered. Empty strip = leftmost 15% (100% - the info panel's
+            w-[85%] below), so its centre sits at 7.5% of the card width;
+            left-[7.5%] -translate-x-1/2 puts this box's own centre there
+            (a few % further right for RIGHT_SHIFTED_AVATARS, whose art draws
+            the character left-of-centre). aspect-square is applied to this
+            plain div (well-supported), not to the <img> directly —
+            aspect-ratio on an absolutely positioned *replaced* element (img)
+            turned out not to reliably size from h-full in testing, which is
+            what caused the image to render at only the width of a narrower
+            wrapper instead of bleeding under the info panel for
+            backdrop-blur to pick up. The img itself now just fills this
+            pre-sized box with plain w-full h-full. */}
+        <div className={`absolute top-0 h-full aspect-square -translate-x-1/2 ${cutinLeftClass}`}>
+          {cutinSrc && (
+            <img
+              src={cutinSrc}
+              alt=""
+              crossOrigin="anonymous"
+              className='w-full h-full object-cover'
+              onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+            />
           )}
-          <ExpandableRefreshButton
-            label={build.isHidden ? 'Unhide' : 'Hide'}
-            icon={build.isHidden ? <MdVisibility /> : <MdVisibilityOff />}
-            enabled={true}
-            loading={mutatingAction === 'hide'}
-            onClick={() => onHide?.(build)}
-          />
-          <ExpandableRefreshButton
-            label="New Build"
-            icon={<MdAdd />}
-            enabled={true}
-            loading={mutatingAction === 'create'}
-            onClick={() => onCreate?.(build)}
-          />
         </div>
-      )}
+
+        {/* info panel — intentionally left empty, filled in separately. */}
+        <div className='relative z-10 w-full h-full flex justify-end'>
+          <div className='w-[85%] h-full backdrop-blur-xl border-l rounded-l-xl border-white/15' />
+        </div>
+      </div>
     </div>
   );
 }

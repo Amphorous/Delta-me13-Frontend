@@ -104,3 +104,47 @@ export const DEFAULT_BUILD_NAME = 'perhaps_feixiao';
 export function displayBuildName(buildName) {
   return buildName && buildName !== DEFAULT_BUILD_NAME ? buildName : null;
 }
+
+// avatarInfo asset paths already include the /ui/hsr/ prefix ("/ui/hsr/SpriteOutput/...")
+// — just prepend the enka host.
+export function enkaUiUrl(path) {
+  return path ? `https://enka.network${path}` : null;
+}
+
+// Ordered skin looks for an avatar: default look first, then alternate skins.
+// Each entry is { sideIcon, cutin } (raw asset paths — render via enkaUiUrl).
+// Skin ids are numeric-string keys, so Object.values order is ascending numeric —
+// stable across renders, which keeps a cycling index meaningful.
+export function getSkinList(avatarInfo) {
+  if (!avatarInfo) return [];
+  const list = [{ sideIcon: avatarInfo.AvatarSideIconPath, cutin: avatarInfo.AvatarCutinFrontImgPath }];
+  for (const skin of Object.values(avatarInfo.Skins ?? {})) {
+    list.push({ sideIcon: skin.AvatarSideIconPath, cutin: skin.AvatarCutinFrontImgPath });
+  }
+  return list;
+}
+
+// Path (AvatarBaseType) and Element icons — filenames match the raw HSR enum
+// values verbatim (e.g. "Warrior.webp", "Fire.webp"), so no alias table is needed.
+const pathIconModules = import.meta.glob('../../../../../assets/path_icons/*.webp', { eager: true });
+const typeIconModules = import.meta.glob('../../../../../assets/type_icons/*.webp', { eager: true });
+
+function buildIconLookup(modules) {
+  const lookup = {};
+  for (const [path, mod] of Object.entries(modules)) {
+    const name = path.replace(/^.*\//, '').replace(/\.webp$/, '');
+    lookup[name] = mod.default;
+  }
+  return lookup;
+}
+
+const PATH_ICONS = buildIconLookup(pathIconModules);
+const TYPE_ICONS = buildIconLookup(typeIconModules);
+
+export function pathIconUrl(avatarBaseType) {
+  return avatarBaseType ? (PATH_ICONS[avatarBaseType] ?? null) : null;
+}
+
+export function elementIconUrl(element) {
+  return element ? (TYPE_ICONS[element] ?? null) : null;
+}

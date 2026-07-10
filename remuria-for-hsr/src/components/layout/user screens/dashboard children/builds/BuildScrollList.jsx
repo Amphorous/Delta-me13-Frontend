@@ -5,7 +5,7 @@ import useBuildScrollSync from './useBuildScrollSync';
 
 const ITEM_HEIGHT = 88;
 
-function BuildScrollList({ builds, onFocusChange, onCharacterFilterClick }) {
+function BuildScrollList({ builds, onFocusChange, onCharacterFilterClick, skinSelections, onCycleSkin }) {
   const y = useMotionValue(0);
   const count = builds.length;
   const { focusedIndex } = useBuildScrollSync(y, count, ITEM_HEIGHT);
@@ -56,7 +56,7 @@ function BuildScrollList({ builds, onFocusChange, onCharacterFilterClick }) {
   }
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-blue-500" onWheel={handleWheel}>
+    <div className="relative w-full h-full overflow-hidden bg-grady-950/70 backdrodp-blur-md rodunded-r-[90%] [will-change:backdrop-filter] [transform:translateZ(0)]" onWheel={handleWheel}>
       <motion.div
         className="absolute left-0 top-1/2 w-full"
         style={{ y }}
@@ -83,6 +83,8 @@ function BuildScrollList({ builds, onFocusChange, onCharacterFilterClick }) {
             isFocused={index === focusedIndex}
             onSelect={() => snapTo(index)}
             onCharacterFilterClick={onCharacterFilterClick}
+            skinIndex={skinSelections?.[build.avatarId] ?? 0}
+            onCycleSkin={onCycleSkin}
           />
         ))}
       </motion.div>

@@ -47,10 +47,19 @@ function ExpandableRefreshButton({ onClick, enabled, loading = false, countdown,
     const [showDone, setShowDone] = useState(false);
     const prevLoading = useRef(loading);
 
+    // Keep the measurement live rather than one-shot: the hidden div's width
+    // changes after mount when the web fonts finish loading (or, in dev, when
+    // the stylesheet is injected after the component mounted). A single mount-time
+    // snapshot taken during that window captures a garbage width — e.g. the
+    // parent's full width — and the hover expand then animates to it.
     useLayoutEffect(() => {
-        if (measureRef.current) {
-            setExpandedWidth(measureRef.current.offsetWidth);
-        }
+        const el = measureRef.current;
+        if (!el) return;
+        const update = () => setExpandedWidth(el.offsetWidth);
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+        return () => observer.disconnect();
     }, [label]);
 
     useEffect(() => {
