@@ -18,11 +18,26 @@ const FALLBACK_GRADIENT_STOPS = ['#3f3f46', '#27272a', '#18181b', '#09090b'];
 const CUTIN_LEFT_DEFAULT = 'left-[7.5%]';
 const CUTIN_LEFT_BY_AVATAR = {
   1106: 'left-[12.5%]',
+  1205: 'left-[8%]',
+  1208: 'left-[9.5%]',
+  1225: 'left-[11%]',
   1301: 'left-[4%]',
+  1313: 'left-[8%]',
+  1403: 'left-[11%]',
+  1406: 'left-[6%]',
   1407: 'left-[11.5%]',
   1408: 'left-[9.5%]',
+  1409: 'left-[3%]',
   1414: 'left-[9%]',
+  1501: 'left-[8.5%]',
   1502: 'left-[11.5%]',
+};
+
+// Same idea, vertical axis — a handful of cutins sit slightly high/low in
+// their own frame regardless of horizontal centring.
+const CUTIN_TOP_DEFAULT = 'top-0';
+const CUTIN_TOP_BY_AVATAR = {
+  1506: 'top-[4%]',
 };
 
 // Hand-picked gradients (4 stops, left -> right) for characters whose palette
@@ -36,6 +51,7 @@ const GRADIENT_OVERRIDE_BY_AVATAR = {
   1220: ['#2fb8a8', '#1f8d84', '#12615e', '#073634'], // turquoise green-blue
   1301: ['#6b1f2a', '#4a141d', '#2a0a10', '#080304'], // deep wine red -> black
   1408: ['#94a3b8', '#475569', '#1e293b', '#020617'], // cool gray -> black
+  1414: ['#14746b', '#0d4e47', '#082e2a', '#020806'], // deep jade-teal -> black (robe/sash, not the gold backdrop motif)
   1415: ['#16245c', '#3f2b7d', '#83377f', '#c25585'], // deep blue -> pink
 };
 
@@ -43,8 +59,8 @@ const GRADIENT_OVERRIDE_BY_AVATAR = {
 // but the tone is off — full overrides above are for when the hue itself is
 // wrong. Applied per stop to the sampled gradient.
 const GRADIENT_ADJUST_BY_AVATAR = {
-  1412: { saturate: 10, darken: 8 }, // deeper and darker
-  1506: { darken: 16 },              // considerably darken
+  1412: { saturate: 16, darken: 18 }, // deeper and darker (bumped twice now)
+  1506: { saturate: 6, darken: 22 },  // considerably darken, then deepened further
 };
 
 function BuildDetailCard({ build, skinIndex = 0 }) {
@@ -86,6 +102,13 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
   const gradientCss = `linear-gradient(to right, ${gradientStops.join(', ')})`;
 
   const cutinLeftClass = CUTIN_LEFT_BY_AVATAR[build?.avatarId] ?? CUTIN_LEFT_DEFAULT;
+  const cutinTopClass = CUTIN_TOP_BY_AVATAR[build?.avatarId] ?? CUTIN_TOP_DEFAULT;
+
+  // Tracks whether the CURRENT cutinSrc has finished loading, so a character
+  // switch shows a spinner instead of the previous character's cutin lingering
+  // on screen while the new image fetches/decodes.
+  const [cutinLoaded, setCutinLoaded] = useState(false);
+  useEffect(() => { setCutinLoaded(false); }, [cutinSrc]);
 
   useEffect(() => {
     if (build) {
@@ -134,15 +157,28 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
             wrapper instead of bleeding under the info panel for
             backdrop-blur to pick up. The img itself now just fills this
             pre-sized box with plain w-full h-full. */}
-        <div className={`absolute top-0 h-full aspect-square -translate-x-1/2 ${cutinLeftClass}`}>
+        <div className={`absolute h-full aspect-square -translate-x-1/2 ${cutinLeftClass} ${cutinTopClass}`}>
+          {/* key={cutinSrc} forces a fresh <img> per character/skin instead of
+              reusing one — reusing it means the browser keeps painting the OLD
+              src's decoded frame until the new one finishes loading, which is
+              exactly the "previous character lingers" bug. With a fresh node,
+              nothing renders until this cutin's own onLoad fires, and the
+              spinner covers that gap. */}
           {cutinSrc && (
             <img
+              key={cutinSrc}
               src={cutinSrc}
               alt=""
               crossOrigin="anonymous"
-              className='w-full h-full object-cover'
+              className={`w-full h-full object-cover transition-opacity duration-150 ${cutinLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setCutinLoaded(true)}
               onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
             />
+          )}
+          {!cutinLoaded && (
+            <div className='absolute inset-0 flex items-center justify-center'>
+              <CgSpinner className='animate-spin text-white/70' size={28} />
+            </div>
           )}
         </div>
 
