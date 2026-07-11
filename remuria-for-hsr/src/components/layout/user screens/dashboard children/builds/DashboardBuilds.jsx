@@ -9,7 +9,7 @@ import BuildDetailCard from './BuildDetailCard';
 import BuildManageModal from './BuildManageModal';
 import { getBuilds, createBuild, renameBuild, deleteBuild, hideBuild } from '../../../../../utils/buildsApi';
 import { getThemeBgColor } from '../../../../../utils/themeColors';
-import { characterIconUrl, displayBuildName } from './buildConstants';
+import { characterIconUrl, handleCharacterIconError, displayBuildName } from './buildConstants';
 import loadFail from '../../../../../assets/Loading Failed.png';
 
 // Widths of the two Builds-tab panels — edit either independently to try different
@@ -174,7 +174,7 @@ function DashboardBuilds() {
 
             {filterByAvatarId && (
               <div className='flex items-center gap-1 bg-[var(--accent-bg-30)] border border-[var(--accent-border-30)] rounded-md px-1.5 py-0.5 text-[var(--accent-muted)] text-xs afacad-light'>
-                <img src={characterIconUrl(filterByAvatarId)} alt="" className='w-4 h-4 rounded-full object-cover' onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
+                <img src={characterIconUrl(filterByAvatarId)} alt="" className='w-4 h-4 rounded-full object-cover' onError={handleCharacterIconError} />
                 <button onClick={() => setFilterByAvatarId(null)} className='hover:text-white transition'>×</button>
               </div>
             )}

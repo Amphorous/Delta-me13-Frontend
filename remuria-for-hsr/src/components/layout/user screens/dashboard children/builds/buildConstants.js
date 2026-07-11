@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { STAT_ALIASES, characterIconUrl, relicPieceIconUrl } from '../relicConstants';
+import { STAT_ALIASES, characterIconUrl, handleCharacterIconError, relicPieceIconUrl } from '../relicConstants';
 
-export { STAT_ALIASES, characterIconUrl, relicPieceIconUrl };
+export { STAT_ALIASES, characterIconUrl, handleCharacterIconError, relicPieceIconUrl };
 
 export function statLabel(type) {
   const alias = STAT_ALIASES.find(s => s.type === type);

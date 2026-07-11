@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdClose, MdEdit, MdDeleteOutline, MdVisibility, MdVisibilityOff, MdCheck } from 'react-icons/md';
 import { getAllBuilds, renameBuild, deleteBuild, hideBuild } from '../../../../../utils/buildsApi';
 import { useTranslatedHash } from '../../../../../utils/hashTranslation';
-import { characterIconUrl, displayBuildName } from './buildConstants';
+import { characterIconUrl, handleCharacterIconError, displayBuildName } from './buildConstants';
 
 // One row: character face + name (buildName, or the character's own name for
 // unnamed/static builds), with inline rename/hide/delete — no navigation away
@@ -74,7 +74,7 @@ function ManageRow({ uid, build, onMutated }) {
         src={characterIconUrl(build.avatarId)}
         alt=""
         className='w-9 h-9 rounded-full object-cover shrink-0'
-        onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+        onError={handleCharacterIconError}
       />
 
       {renaming ? (
