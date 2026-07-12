@@ -3,8 +3,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Afacad:wght@700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Afacad:wght@500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Afacad&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=League+Gothic&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Gasoek+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Liu+Jian+Mao+Cao&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pattaya&display=swap');
 @import "tailwindcss";
 @plugin 'tailwind-scrollbar';
+
+/* "Holiday" (alphArtype / Agung Rohmat) isn't on Google Fonts — self-hosted from
+   https://www.dafont.com/holiday-4.font. Free for personal use only, not for
+   commercial use (see readme in src/assets/fonts/). */
+@font-face {
+  font-family: "Holiday";
+  src: url("./assets/fonts/HolidayFree.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ── Accent theme CSS variables ───────────────────────────────────────────────
    ThemeManager.jsx sets these on :root at runtime based on the active theme.
@@ -89,7 +105,50 @@
     font-style: normal;
     /* line-height: 1; */
   }
-  
+
+  /* Layered name treatment (BuildDetailCard's stylised-name-and-barcode div):
+     League Gothic is the main/dominant layer (always white), Holiday is
+     overlaid directly on top of it, tinted with the card's own accent colour. */
+  .league-gothic-font {
+    font-family: "League Gothic", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .holiday-font {
+    font-family: "Holiday", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  /* Per-locale substitutes for the League Gothic/Holiday pairing above —
+     neither of those covers these scripts, so BuildDetailCard swaps to one
+     of these single layers instead for JP/KR/CN/TW/TH (see
+     NAME_FONT_CLASS_BY_LOCALE there). */
+  .dotgothic16-font {
+    font-family: "DotGothic16", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .gasoek-one-font {
+    font-family: "Gasoek One", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .liu-jian-mao-cao-font {
+    font-family: "Liu Jian Mao Cao", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .pattaya-font {
+    font-family: "Pattaya", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
   .vertical-text {
     writing-mode: vertical-lr;
   }
@@ -113,4 +172,19 @@
 
   .line-height-06 {
     line-height: 0.6;
+  }
+
+  /* BuildDetailCard's rank-eidolon icons: a moving highlight sweep layered
+     over an activated (unlocked) icon, same background-position-animation
+     technique as RelicList's CV shimmer, just as a plain overlay div here
+     instead of background-clip:text (icons aren't text glyphs to clip to). */
+  @keyframes rank-icon-shimmer-sweep {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+
+  .rank-icon-shimmer {
+    background-image: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.65) 50%, transparent 60%);
+    background-size: 300% 100%;
+    animation: rank-icon-shimmer-sweep 2.2s linear infinite;
   }

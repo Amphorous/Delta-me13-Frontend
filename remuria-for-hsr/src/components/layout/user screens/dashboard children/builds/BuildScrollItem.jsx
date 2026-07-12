@@ -4,7 +4,7 @@ import { motion, useTransform } from 'framer-motion';
 import { MdAdd, MdEdit } from 'react-icons/md';
 import { IoShirtOutline } from 'react-icons/io5';
 import { FaStar } from 'react-icons/fa';
-import { characterIconUrl, displayBuildName, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl } from './buildConstants';
+import { characterIconUrl, handleCharacterIconError, displayBuildName, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl } from './buildConstants';
 import { getThemeBgColor } from '../../../../../utils/themeColors';
 import { useTranslatedHash } from '../../../../../utils/hashTranslation';
 import useAvatarPatternBg from './useAvatarPatternBg';
@@ -280,7 +280,7 @@ function BuildScrollItem({ build, index, itemHeight, y, isFocused, onSelect, onC
           alt=""
           className="relative -ml-3 h-[130%] object-cover shrink-0"
           onClick={(e) => { e.stopPropagation(); onCharacterFilterClick?.(build.avatarId); }}
-          onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+          onError={handleCharacterIconError}
           onLoad={(e) => { e.currentTarget.style.visibility = 'visible'; }}
         />
         <div className="flex flex-col justify-center w-full h-full [container-type:size]">

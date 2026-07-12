@@ -100,6 +100,22 @@ export function statIconGetter(statType) {
   else if (t.includes("sp")) return iconSPRatio;
 }
 
+const ANON_CHARACTER_ICON_URL = "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
+
 export function characterIconUrl(avatarId) {
   return `https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/Avatar/${avatarId}.png`;
+}
+
+// onError handler for <img src={characterIconUrl(...)}>. Not every avatarId
+// actually resolves under the /Avatar/ path on enka's CDN — retry one level up
+// without that segment, then fall back to the anonymous placeholder if that
+// also 404s. Same cascading-retry shape as the /Series/ handling in
+// UserCard.jsx/UserLongCard.jsx for the user profile icon.
+export function handleCharacterIconError(e) {
+  const src = e.currentTarget.src;
+  if (src.includes('/AvatarRoundIcon/Avatar/')) {
+    e.currentTarget.src = src.replace('/AvatarRoundIcon/Avatar/', '/AvatarRoundIcon/');
+  } else if (src !== ANON_CHARACTER_ICON_URL) {
+    e.currentTarget.src = ANON_CHARACTER_ICON_URL;
+  }
 }

@@ -14,7 +14,7 @@ import { useSelector } from "react-redux";
 import { selectLoc } from '../../../../store/localisationSlice';
 import { selectRelicAnimations, selectRelicShowCV } from '../../../../store/settingsSlice';
 import axios from 'axios';
-import { statIconGetter, parseTid, relicPieceIconUrl, characterIconUrl } from './relicConstants';
+import { statIconGetter, parseTid, relicPieceIconUrl, characterIconUrl, handleCharacterIconError } from './relicConstants';
 
 function statNameGetter(statType) {
     if (!statType) return '';
@@ -305,7 +305,7 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
                                                 src={characterIconUrl(avatarId)}
                                                 alt=""
                                                 className='w-7 h-7 rounded-full border border-white/20 object-cover shrink-0'
-                                                onError={e => { e.currentTarget.style.display = 'none'; }}
+                                                onError={handleCharacterIconError}
                                             />
                                             {name && <span className='text-white/75 afacad-light text-xs'>{name}</span>}
                                         </div>
