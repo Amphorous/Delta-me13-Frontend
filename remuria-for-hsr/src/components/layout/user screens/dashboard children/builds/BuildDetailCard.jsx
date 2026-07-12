@@ -1,9 +1,86 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { LuUsersRound } from 'react-icons/lu';
 import { CgSpinner } from 'react-icons/cg';
 import tinycolor from 'tinycolor2';
-import { characterIconUrl, enkaUiUrl, getSkinList } from './buildConstants';
+import { characterIconUrl, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl } from './buildConstants';
 import useCutinGradient from './useCutinGradient';
+import { useTranslatedHash } from '../../../../../utils/hashTranslation';
+import { selectRankIconShimmer } from '../../../../../store/settingsSlice';
+import { selectLoc } from '../../../../../store/localisationSlice';
+
+// Vertex (corner) notches, positioned at the 4 corners of the
+// "cutouts-being-made" panel but *applied* to the outermost build-detail-card
+// element — so each notch punches all the way through every stacked layer
+// (gradient, cutin, blur panel) instead of just carving cutouts-being-made's
+// own backdrop-blur and leaving the gradient/cutin visible underneath it.
+// Each notch is a radial-gradient circle whose *centre* sits exactly on the
+// corner it cuts — since only the inward quarter of the circle falls inside
+// the element, that alone yields the quarter-circle bite with no separate
+// clipping step (same trick BuildScrollItem's ticket-stub notches use for the
+// top/bottom edge).
+// cutouts-being-made is narrower than build-detail-card (it's nested inside
+// the 85%-wide info panel, flush to that panel's left edge), so its corners
+// don't sit at a fixed 0%/100% of the outer card — their position has to be
+// measured relative to the card, not assumed.
+const CORNER_NOTCH_RADIUS = 10; // px
+
+function radialNotch(shape, position) {
+  return `radial-gradient(${shape} at ${position}, transparent 99%, #000 100%)`;
+}
+
+// Mirrors CutoutUtil's mask compositing: every layer intersects with the
+// accumulated result (carving out its own hole) except the last, which has to
+// seed the canvas via add/source-over.
+function buildNotchMaskStyle(layers) {
+  if (!layers.length) return {};
+  const composites = layers.map(() => 'intersect');
+  const webkitComposites = layers.map(() => 'source-in');
+  composites[composites.length - 1] = 'add';
+  webkitComposites[webkitComposites.length - 1] = 'source-over';
+  return {
+    WebkitMaskImage: layers.join(', '),
+    maskImage: layers.join(', '),
+    WebkitMaskComposite: webkitComposites.join(', '),
+    maskComposite: composites.join(', '),
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+  };
+}
+
+// Static, unmeasured twin of the same notch shape — applied directly on
+// cutouts-being-made so ITS OWN backdrop-blur paint is punched at the same 4
+// corners the outer mask cuts. Without this, the blur panel (stacked on top
+// of the outer card) simply paints solid glass right over the hole the outer
+// mask carves, hiding it again — masking an ancestor clips that ancestor's
+// own painted content, but a descendant's own backdrop-filter is composited
+// independently and isn't reliably cut by an ancestor's mask in practice.
+// Corners here are always 0%/100% of the element's OWN box (no cross-div
+// measurement needed, unlike the outer mask which has to locate this div's
+// corners relative to a bigger sibling box).
+const LOCAL_CORNER_MASK_STYLE = buildNotchMaskStyle([
+  radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '0% 0%'),
+  radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '100% 0%'),
+  radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '0% 100%'),
+  radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '100% 100%'),
+]);
+
+// Small bites at the 4 cardinal points of each rank-eidolon socket ring,
+// giving its dashed border the same "interrupted, flowing around a cutout"
+// look as the rest of the card instead of a plain unbroken circle. The ring
+// itself is a fixed w-11/h-11 (44px) box now — it used to size itself purely
+// from padding with no explicit width/height, which left it vulnerable to
+// the flex column's default align-items:stretch distorting it into an
+// ellipse instead of a circle; an explicit square size sidesteps that.
+const RANK_SOCKET_NOTCH_RADIUS = 7; // px
+const RANK_SOCKET_NOTCH_MASK_STYLE = buildNotchMaskStyle([
+  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '50% 0%'),
+  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '50% 100%'),
+  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '0% 50%'),
+  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '100% 50%'),
+]);
+const RANK_ICON_SIZE = 32; // px — sized to sit inside the 44px ring (minus its border-2) with a small margin
+const RANK_CUTOUT_RADIUS = 20; // px — the actual hole punched through cutouts-being-made's blur, tracked to each ring's measured centre
 
 // Neutral placeholder while the cutin's gradient is still being sampled (or
 // there's no cutin to sample at all) — same 4-stop shape as the real thing,
@@ -40,13 +117,6 @@ const CUTIN_TOP_BY_AVATAR = {
   1506: 'top-[4%]',
 };
 
-// Hand-picked gradients (4 stops, left -> right) for characters whose palette
-// the extractor can't get right by construction. Phainon (1408) is
-// near-monochrome white/gray: the vibrancy vote deliberately filters out all
-// neutrals (they carry no hue), so the only pixels left voting are his warm
-// skin shading — and the saturation floor in useCutinGradient then amplified
-// that into reddish orange. No weighting tweak fixes "the character's
-// identity colour IS a neutral", so these skip extraction entirely.
 const GRADIENT_OVERRIDE_BY_AVATAR = {
   1220: ['#2fb8a8', '#1f8d84', '#12615e', '#073634'], // turquoise green-blue
   1301: ['#6b1f2a', '#4a141d', '#2a0a10', '#080304'], // deep wine red -> black
@@ -63,8 +133,42 @@ const GRADIENT_ADJUST_BY_AVATAR = {
   1506: { saturate: 6, darken: 22 },  // considerably darken, then deepened further
 };
 
+// League Gothic/Holiday are Latin display faces with no glyphs for these
+// scripts, so locales that need them get a single substitute layer instead
+// of the two-layer Latin treatment (see the name JSX below) — a different
+// face per locale rather than one shared font, since JP/KR/CN-TW/TH don't
+// share a script and no single face covers all of them well. This same map
+// also decides which locales fall back to barcoding the raw name hash
+// instead of the translated name (see the barcode JSX further down) — none
+// of these scripts render as recognisable barcode stripes in Libre Barcode 39.
+const NAME_FONT_CLASS_BY_LOCALE = {
+  jp: 'dotgothic16-font',
+  kr: 'gasoek-one-font',
+  cn: 'liu-jian-mao-cao-font',
+  tw: 'liu-jian-mao-cao-font',
+  th: 'pattaya-font',
+};
+
 function BuildDetailCard({ build, skinIndex = 0 }) {
+  const rankIconShimmerEnabled = useSelector(selectRankIconShimmer);
+  const locale = useSelector(selectLoc);
+  // null for locales that use the regular League Gothic/Holiday treatment.
+  const localeFontClass = NAME_FONT_CLASS_BY_LOCALE[locale] ?? null;
   const captureRef = useRef(null);
+  const cutoutsRef = useRef(null);
+  const [cornerMaskStyle, setCornerMaskStyle] = useState({});
+  // One ref per rank socket (populated via callback ref in the JSX below) and
+  // the measured {leftPct, topPct} centre of each, relative to the outer
+  // card — see the rankSocketRefs useLayoutEffect further down for why the
+  // icons themselves render from this instead of just living inside the
+  // socket divs.
+  const rankSocketRefs = useRef([]);
+  const [rankIconRects, setRankIconRects] = useState([]);
+  // cutouts-being-made's own mask: the 4 static corner notches plus a hole
+  // tracked to each ring's measured centre (see the rankSocketRefs
+  // useLayoutEffect further down). Defaults to just the corners so they
+  // still show before the first measurement pass.
+  const [localMaskStyle, setLocalMaskStyle] = useState(LOCAL_CORNER_MASK_STYLE);
 
   // Skin selection (cycled from the scroll item's shirt toggle, state lives in
   // DashboardBuilds). Index 0 = default look. Falls back to the character's
@@ -78,6 +182,17 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
     ? enkaUiUrl(activeSkin.sideIcon)
     : build ? characterIconUrl(build.avatarId) : null;
   const cutinSrc = (activeSkin && enkaUiUrl(activeSkin.cutin)) ?? avatarIconSrc;
+  
+  // Always the character's own name here, never the build's custom name —
+  // unlike BuildScrollItem's strip label, this vertical treatment is meant to
+  // read as the character's title card, not whichever build is selected.
+  const avatarName = useTranslatedHash(build?.avatarInfo?.AvatarNameHash);
+  // Dan Heng's alternate forms translate as "Dan Heng <separator glyph>
+  // <Subtitle>" (e.g. "Dan Heng • Imbibitor Lunae") — show just the
+  // distinguishing subtitle, not the "Dan Heng" prefix or its separator.
+  // Plain "Dan Heng" (no subtitle) has nothing to extract, so it's untouched.
+  const danHengSubtitle = avatarName?.match(/Dan Heng[^A-Za-z]*([A-Za-z][A-Za-z\s]*)$/)?.[1]?.trim();
+  const nameText = danHengSubtitle || avatarName;
 
   // Gradient samples the avatar ICON, not the cutin splash: cutin art often
   // centres decorative environment effects (Castorice's skin has a golden
@@ -100,9 +215,32 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
     : extractedStops;
   const gradientStops = overrideStops ?? adjustedStops ?? FALLBACK_GRADIENT_STOPS;
   const gradientCss = `linear-gradient(to right, ${gradientStops.join(', ')})`;
+  // "Card accent colour" for the Holiday name layer — the brightest/most vivid
+  // stop of this build's own extracted (or overridden) gradient, so the accent
+  // always matches this specific character rather than the app-wide theme accent.
+  const cardAccentColor = gradientStops[0];
 
   const cutinLeftClass = CUTIN_LEFT_BY_AVATAR[build?.avatarId] ?? CUTIN_LEFT_DEFAULT;
   const cutinTopClass = CUTIN_TOP_BY_AVATAR[build?.avatarId] ?? CUTIN_TOP_DEFAULT;
+
+  const pathIcon = pathIconUrl(build?.avatarInfo?.AvatarBaseType);
+  const elementIcon = elementIconUrl(build?.avatarInfo?.Element);
+
+  // Ranks maps "1".."6" (eidolon number) -> icon path, with only unlocked
+  // eidolons present as keys — always render all 6 sockets so the column
+  // reads as a fixed set of slots, filling in an icon only where this build
+  // actually has that rank.
+  const rankIcons = build?.avatarInfo?.Ranks ?? {};
+  const rankSlots = Array.from({ length: 6 }, (_, i) => {
+    const iconPath = rankIcons[String(i + 1)];
+    return iconPath ? enkaUiUrl(iconPath) : null;
+  });
+
+  // build.rank doesn't exist yet — hard-coded to 3 for now so the
+  // activated-vs-dulled contrast is visible to test against before the real
+  // field lands. TODO: change this fallback to 0 once build.rank is actually
+  // populated by the backend.
+  const activatedRankCount = build?.rank ?? 0;
 
   // Tracks whether the CURRENT cutinSrc has finished loading, so a character
   // switch shows a spinner instead of the previous character's cutin lingering
@@ -114,6 +252,98 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
     if (build) {
       console.log("BuildDetailCard build:", build);
     }
+  }, [build]);
+
+  // Corner notches are cut at cutouts-being-made's own corners but applied to
+  // the outer card (see comment above CORNER_NOTCH_RADIUS) — that requires
+  // measuring cutouts-being-made's box relative to the card's, since it isn't
+  // flush with the card's own edges. getBoundingClientRect is safe here
+  // (unlike BuildScrollItem) because nothing in this tree carries a CSS
+  // transform/scale that would skew the rects. Depends on `build` so it
+  // re-measures once the card actually mounts (refs are null while the
+  // "No build selected" placeholder is showing instead).
+  useLayoutEffect(() => {
+    const cardEl = captureRef.current;
+    const cutoutsEl = cutoutsRef.current;
+    if (!cardEl || !cutoutsEl) return;
+
+    const measure = () => {
+      const cardRect = cardEl.getBoundingClientRect();
+      const cutoutsRect = cutoutsEl.getBoundingClientRect();
+      if (!cardRect.width || !cardRect.height) return;
+
+      const leftPct = ((cutoutsRect.left - cardRect.left) / cardRect.width) * 100;
+      const rightPct = ((cutoutsRect.right - cardRect.left) / cardRect.width) * 100;
+      const topPct = ((cutoutsRect.top - cardRect.top) / cardRect.height) * 100;
+      const bottomPct = ((cutoutsRect.bottom - cardRect.top) / cardRect.height) * 100;
+
+      setCornerMaskStyle(buildNotchMaskStyle([
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, `${leftPct}% ${topPct}%`),
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, `${rightPct}% ${topPct}%`),
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, `${leftPct}% ${bottomPct}%`),
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, `${rightPct}% ${bottomPct}%`),
+      ]));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(cardEl);
+    observer.observe(cutoutsEl);
+    return () => observer.disconnect();
+  }, [build]);
+
+  // Rank icons can't just render *inside* their socket div: that div lives
+  // inside cutouts-being-made's absolutely-positioned, translated column, and
+  // an icon sized to actually fill a socket needs to sit centred on a ring
+  // that's straddling that column's own narrow bounds — the same class of
+  // "nested too deep inside a transformed wrapper" problem the corner
+  // notches and the barcode span both ran into earlier in this file. Instead
+  // of nesting the icon there, each socket's own screen centre is measured
+  // and used two ways: (1) relative to the outer card, to position the icon
+  // overlay rendered as a sibling of the info panel (see the JSX near the
+  // end), and (2) relative to cutouts-being-made itself, to punch an actual
+  // hole through ITS OWN blur at that exact same tracked point — same
+  // "measure once, render/mask at the right level" pattern the corner-notch
+  // effect above already uses, just driving two different targets from one
+  // set of measurements instead of one.
+  useLayoutEffect(() => {
+    const cardEl = captureRef.current;
+    const cutoutsEl = cutoutsRef.current;
+    if (!cardEl || !cutoutsEl) return;
+
+    const measure = () => {
+      const cardRect = cardEl.getBoundingClientRect();
+      const cutoutsRect = cutoutsEl.getBoundingClientRect();
+      if (!cardRect.width || !cardRect.height || !cutoutsRect.width || !cutoutsRect.height) return;
+
+      const ringRects = rankSocketRefs.current.map((el) => el?.getBoundingClientRect() ?? null);
+
+      setRankIconRects(ringRects.map((rect) => rect && {
+        leftPct: ((rect.left + rect.width / 2 - cardRect.left) / cardRect.width) * 100,
+        topPct: ((rect.top + rect.height / 2 - cardRect.top) / cardRect.height) * 100,
+      }));
+
+      const ringNotches = ringRects.filter(Boolean).map((rect) => {
+        const leftPct = ((rect.left + rect.width / 2 - cutoutsRect.left) / cutoutsRect.width) * 100;
+        const topPct = ((rect.top + rect.height / 2 - cutoutsRect.top) / cutoutsRect.height) * 100;
+        return radialNotch(`circle ${RANK_CUTOUT_RADIUS}px`, `${leftPct}% ${topPct}%`);
+      });
+
+      setLocalMaskStyle(buildNotchMaskStyle([
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '0% 0%'),
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '100% 0%'),
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '0% 100%'),
+        radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '100% 100%'),
+        ...ringNotches,
+      ]));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(cardEl);
+    observer.observe(cutoutsEl);
+    rankSocketRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
   }, [build]);
 
   if (!build) {
@@ -137,12 +367,16 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
           exception, as a plain colour-stop fill) — canvas-capture libraries
           (html2canvas, dom-to-image) frequently drop or blank real image
           background-images, so the cutin below is a plain <img crossOrigin>
-          instead, which those libraries rasterize reliably. */}
+          instead, which those libraries rasterize reliably. cornerMaskStyle
+          (measured from cutouts-being-made, see the useLayoutEffect above) is
+          applied here — not on cutouts-being-made itself — so the 4 vertex
+          notches cut through every layer of the card: background, cutin,
+          info panel, blur — down to whatever's behind the component. */}
       <div
         ref={captureRef}
         id="build-detail-card"
         className='relative aspect-[21/10] w-[min(100cqw,210cqh)] flex overflow-hidden rounded-3xl ring-1 ring-white/10'
-        style={{ background: gradientCss }}
+        style={{ background: gradientCss, ...cornerMaskStyle }}
       >
         {/* cutin art, centered on the empty strip the info panel leaves
             uncovered. Empty strip = leftmost 15% (100% - the info panel's
@@ -182,10 +416,133 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
           )}
         </div>
 
-        {/* info panel — intentionally left empty, filled in separately. */}
+        {/* info panel */}
         <div className='relative z-10 w-full h-full flex justify-end'>
-          <div className='w-[85%] h-full backdrop-blur-xl border-l rounded-l-xl border-white/15' />
+
+          <div className='w-[85%] h-full flex [container-type:size]'>
+            <div
+              ref={cutoutsRef}
+              className='cutouts-being-made relative h-full backdrop-blur-xl border-l-2 border-r-2 border-white/10 border-dashed w-[87%] '
+              style={localMaskStyle}
+            >
+              <div className='absolute bg-amdber-400 bottom-0 right-0 translate-x-1/2 h-[85cqh] px-5 py-3 mb-2 flex flex-col items-center justify-around' >
+                {rankSlots.map((_, i) => (
+                  <div
+                    key={i}
+                    ref={(el) => { rankSocketRefs.current[i] = el; }}
+                    className='w-11 h-11 shrink-0 rounded-full border-2 border-white/15 border-dashed'
+                    style={RANK_SOCKET_NOTCH_MASK_STYLE}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className='m-2 flex-grow flex flex-col [container-type:size]'>
+              {/* path + element icons, side by side, evenly split and each
+                  filling the row's full height (aspect-square keeps them from
+                  distorting if the row itself ever isn't square-icon-shaped). */}
+              <div className='h-[12cqh] w-full flex items-center justify-center gap-3 bg-ambder-400 p-5 path-and-element
+               '>
+                {pathIcon && (
+                  <div className='flex-1 h-full flex items-center justify-center'>
+                    <img src={pathIcon} alt="" className='h-full aspect-square object-contain' />
+                  </div>
+                )}
+                {elementIcon && (
+                  <div className='flex-1 h-full flex items-center justify-center'>
+                    <img src={elementIcon} alt="" className='h-full aspect-square object-contain' />
+                  </div>
+                )}
+              </div>
+
+              <div className='flex-grow mt-1 flex items-center justify-center overflow-hidden [container-type:size]
+              border-t-2 border-dashed border-white/20
+               stylised-name bg-amdber-400'>
+                {/* layered name treatment: League Gothic is the main/dominant
+                    layer (always white), Holiday is overlaid directly on top
+                    of it in this build's own accent colour — same idea as a
+                    fragrance-label wordmark or a lot of HSR's own character
+                    title cards (there's no single universally-agreed name for
+                    "bold font layered over a looser one in the same spot";
+                    "layered wordmark"/"stacked signature" are the closest
+                    common descriptions). The back layer is absolutely
+                    centred via transform so it lines up on the front layer
+                    regardless of either one's own (very different) rendered
+                    footprint. Sizes are kept well under 100cqh (the parent's
+                    own height, since it's a container-type:size context) —
+                    vertical-text with whitespace-nowrap renders as one tall
+                    unwrapped column, so font-size drives the run's total
+                    height, not just glyph size; overflow-hidden on the parent
+                    is a hard backstop so long names clip cleanly instead of
+                    bleeding into the row above.
+                    Barcode removed for now (added back manually later). */}
+                <div className='relative h-full flex items-center justify-center'>
+
+                  {!localeFontClass && (
+                    <span
+                      className={`holiday-font vertical-text whitespace-nowrap ${(nameText?.length ?? 0) > 15 ? 'text-[9cqh]' : 'text-[10cqh]'}`}
+                      style={{ color: cardAccentColor }}
+                    >
+                      {nameText}
+                    </span>
+                  )}
+                  <span className={`${localeFontClass ?? 'league-gothic-font'} vertical-text absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[15cqh] text-white whitespace-nowrap select-none pointer-events-none`}>
+                    {nameText}
+                  </span>
+
+                </div>
+              </div>
+
+              <div
+                    className='barcode-font mx-auto h-[3cqh] w-[60%] text-[16cqw] whitespace-nowrap text-center overflow-hidden'
+                    style={{ color: cardAccentColor }}
+                  >
+                  {/* Libre Barcode 39 only really has glyphs for Latin
+                      letters/digits — locales in NAME_FONT_CLASS_BY_LOCALE
+                      (JP/KR/CN/TW/TH) barcode the raw (numeric) name hash
+                      instead of the translated name, since none of those
+                      scripts render as recognisable barcode stripes.
+                      Everywhere else barcodes fine, translated name included. */}
+                  {localeFontClass ? build?.avatarInfo?.AvatarNameHash : avatarName}
+              </div>
+
+            </div>
+          </div>
         </div>
+
+        {/* Rank icons render here, as siblings of the info panel, rather than
+            inside their socket divs — see the rankIconRects useLayoutEffect
+            above for why. Positioned from each socket's own measured centre.
+            Ranks at or below activatedRankCount get full colour, plus a
+            shimmer sweep (.rank-icon-shimmer, defined in index.css) when the
+            user's rankIconShimmer setting is on (defaults off); ranks above
+            it are desaturated/dimmed via filter to read as locked. */}
+        {rankSlots.map((iconSrc, i) => {
+          const rect = rankIconRects[i];
+          if (!iconSrc || !rect) return null;
+          const isActivated = (i + 1) <= activatedRankCount;
+          return (
+            <div
+              key={i}
+              className='absolute rounded-full overflow-hidden pointer-events-none'
+              style={{
+                left: `${rect.leftPct}%`,
+                top: `${rect.topPct}%`,
+                width: RANK_ICON_SIZE,
+                height: RANK_ICON_SIZE,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <img
+                src={iconSrc}
+                alt=""
+                className='w-full h-full object-cover'
+                style={isActivated ? undefined : { filter: 'grayscale(1) brightness(0.55)', opacity: 0.55 }}
+              />
+              {isActivated && rankIconShimmerEnabled && <div className='rank-icon-shimmer absolute inset-0' />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

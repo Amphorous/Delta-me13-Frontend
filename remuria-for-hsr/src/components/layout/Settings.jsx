@@ -502,6 +502,11 @@ function Settings() {
 
                 <Section title="Localisation">
                     <LanguageSelector />
+                    <SettingsRow
+                        settingKey="jpKanjiMode"
+                        label="Kanji Mode"
+                        description="Japanese locale only: show character names in kanji. Off shows the furigana reading instead."
+                    />
                 </Section>
 
                 <Section title="Relic">
@@ -524,6 +529,14 @@ function Settings() {
                         settingKey="relicCVShimmer"
                         label="CV Shimmer"
                         description="Animate the top two CV tiers with a shimmer gradient. Off shows solid colour instead."
+                    />
+                </Section>
+
+                <Section title="Build">
+                    <SettingsRow
+                        settingKey="rankIconShimmer"
+                        label="Rank Icon Shimmer"
+                        description="Animate unlocked eidolon rank icons on the build detail card with a shimmer sweep. Off shows solid colour instead."
                     />
                 </Section>
 

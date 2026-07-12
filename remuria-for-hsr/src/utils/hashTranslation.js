@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { selectLoc } from '../store/localisationSlice';
+import { selectJpKanjiMode } from '../store/settingsSlice';
 
 // The translator returns this sentinel for hashes it has no textmap entry for (and
 // for everything while its Redis is still warming up) — treat it as "no translation"
@@ -12,6 +13,20 @@ const MISSING = 'Translation Missing';
 // mean nothing outside the game client — strip any <...> markup, keep the text.
 function stripRenderTags(value) {
   return value.replace(/<[^>]*>/g, '').trim();
+}
+
+// JP textmap strings wrap kanji words in furigana ruby markup, e.g.
+// "{RUBY_B#たんこう}丹恒{RUBY_E#}・{RUBY_B#とうこう}騰荒{RUBY_E#}" — RUBY_B's
+// payload (after the #) is the kana reading, the text between it and RUBY_E
+// is the kanji itself. The raw fetched/cached text keeps this markup intact
+// (see translateHash below); useTranslatedHash resolves it down to just the
+// kanji or just the reading at render time, based on the jpKanjiMode
+// setting, so toggling that setting updates displayed names immediately
+// without needing to re-fetch or bust the cache.
+const RUBY_PATTERN = /\{RUBY_B#([^}]*)\}([^{]*)\{RUBY_E#\}/g;
+
+function resolveRubyText(value, useKanji) {
+  return value.replace(RUBY_PATTERN, (_match, reading, kanji) => (useKanji ? kanji : reading));
 }
 
 // `${locale}:${hash}` -> Promise<string|null>. Caches the in-flight promise itself
@@ -49,6 +64,7 @@ export function translateHash(locale, hash) {
 // the translated string, or null while loading / when untranslatable.
 export function useTranslatedHash(hash) {
   const locale = useSelector(selectLoc);
+  const jpKanjiMode = useSelector(selectJpKanjiMode);
   const [text, setText] = useState(null);
 
   useEffect(() => {
@@ -58,5 +74,5 @@ export function useTranslatedHash(hash) {
     return () => { cancelled = true; };
   }, [locale, hash]);
 
-  return text;
+  return locale === 'jp' && text ? resolveRubyText(text, jpKanjiMode) : text;
 }

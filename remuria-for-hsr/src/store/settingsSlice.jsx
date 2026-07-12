@@ -26,6 +26,8 @@ const defaults = {
     relicShowCV: false,
     relicCVShimmer: true,
     bgBlur: 'medium',
+    rankIconShimmer: false,
+    jpKanjiMode: true,
 };
 
 const saved = loadFromStorage();
@@ -72,4 +74,6 @@ export const selectRelicTwoColumn = (state) => state.settings.relicTwoColumn;
 export const selectRelicShowCV = (state) => state.settings.relicShowCV;
 export const selectRelicCVShimmer = (state) => state.settings.relicCVShimmer;
 export const selectBgBlur = (state) => state.settings.bgBlur;
+export const selectRankIconShimmer = (state) => state.settings.rankIconShimmer;
+export const selectJpKanjiMode = (state) => state.settings.jpKanjiMode;
 export default settingsSlice.reducer;
