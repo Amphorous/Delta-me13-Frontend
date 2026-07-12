@@ -535,7 +535,7 @@ function Settings() {
                 <Section title="Build">
                     <SettingsRow
                         settingKey="rankIconShimmer"
-                        label="Rank Icon Shimmer"
+                        label="Eidolon Icon Shimmer"
                         description="Animate unlocked eidolon rank icons on the build detail card with a shimmer sweep. Off shows solid colour instead."
                     />
                 </Section>
