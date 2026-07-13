@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useOutletContext } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
-import { MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck, MdClose, MdVisibility, MdVisibilityOff, MdEdit, MdAdd, MdDeleteOutline } from 'react-icons/md';
+import { MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck, MdClose, MdVisibility, MdVisibilityOff, MdEdit, MdAdd, MdDeleteOutline, MdErrorOutline } from 'react-icons/md';
 import { CgSpinner } from 'react-icons/cg';
 import BuildScrollList from './BuildScrollList';
 import BuildDetailCard from './BuildDetailCard';
@@ -287,14 +287,28 @@ function DashboardBuilds() {
         </div>
       </div>
 
-      {mutationError && (
-        <div className='w-full px-4 pb-2 shrink-0'>
-          <div className='w-full flex items-center justify-between'>
-            <span>{mutationError}</span>
-            <button onClick={() => setMutationError(null)}>×</button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {mutationError && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className='w-full px-4 pb-2 shrink-0'
+          >
+            <div className='w-full flex items-center gap-2 bg-red-950/40 backdrop-blur-md border border-red-500/30 rounded-lg px-3 py-2'>
+              <MdErrorOutline className='text-red-400 shrink-0' size={16} />
+              <span className='flex-1 min-w-0 text-red-200 afacad-light text-xs'>{mutationError}</span>
+              <button
+                onClick={() => setMutationError(null)}
+                className='text-red-400/70 hover:text-red-300 transition p-0.5 rounded shrink-0'
+              >
+                <MdClose size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className='flex-1 min-h-0 px-4 pb-4'>
         {buildsInfo === null ? (
