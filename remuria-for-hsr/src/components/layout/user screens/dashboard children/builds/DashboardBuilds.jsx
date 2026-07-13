@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useOutletContext } from 'react-router';
-import { useSelector } from 'react-redux';
-import { MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck, MdClose } from 'react-icons/md';
+import { useSelector, useDispatch } from 'react-redux';
+import { MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck, MdClose, MdVisibility, MdVisibilityOff, MdEdit, MdAdd, MdDeleteOutline } from 'react-icons/md';
 import { CgSpinner } from 'react-icons/cg';
 import BuildScrollList from './BuildScrollList';
 import BuildDetailCard from './BuildDetailCard';
 import BuildManageModal from './BuildManageModal';
 import { getBuilds, createBuild, renameBuild, deleteBuild, hideBuild } from '../../../../../utils/buildsApi';
 import { getThemeBgColor } from '../../../../../utils/themeColors';
-import { characterIconUrl, handleCharacterIconError, displayBuildName } from './buildConstants';
+import { characterIconUrl, handleCharacterIconError, displayBuildName, MAX_BUILD_NAME_LENGTH } from './buildConstants';
+import { toggleSetting, selectHideBuildIdentity } from '../../../../../store/settingsSlice';
 import loadFail from '../../../../../assets/Loading Failed.png';
 
 // Widths of the two Builds-tab panels — edit either independently to try different
@@ -20,10 +21,12 @@ const DETAIL_CARD_WIDTH = '75%';
 function DashboardBuilds() {
   const uid = useLocation().pathname.split("/")[2];
   const { refreshKey, bumpRefresh } = useOutletContext() || {};
+  const dispatch = useDispatch();
 
   const bindings = useSelector(state => state.bindings);
   const hsrUids = Array.isArray(bindings?.hsr) ? bindings.hsr : [];
   const isOwnUid = hsrUids.includes(uid);
+  const hideBuildIdentity = useSelector(selectHideBuildIdentity);
 
   const [page, setPage] = useState(1);
   const [sortOrder, setSortOrder] = useState('DESC');
@@ -54,6 +57,10 @@ function DashboardBuilds() {
   const [renameText, setRenameText] = useState('');
   const [showCreatePrompt, setShowCreatePrompt] = useState(false);
   const [createText, setCreateText] = useState('');
+  // The build-name textbox lives permanently in the sort bar (see promptOpen
+  // below) rather than mounting/unmounting, so autoFocus won't retrigger when
+  // entering edit mode — focus it manually instead.
+  const buildNameInputRef = useRef(null);
 
   // avatarId -> index into getSkinList(avatarInfo). Lives here (not in the scroll
   // item) so the strip icon and the detail card's icon/cutin stay in sync.
@@ -146,6 +153,7 @@ function DashboardBuilds() {
   }
 
   const promptOpen = !!renameTarget || showCreatePrompt;
+  useEffect(() => { if (promptOpen) buildNameInputRef.current?.focus(); }, [promptOpen]);
 
   return (
     <div className='flex flex-col w-full h-full'>
@@ -191,12 +199,86 @@ function DashboardBuilds() {
               </button>
             </div>
 
+            <button
+              onClick={() => dispatch(toggleSetting('hideBuildIdentity'))}
+              className={`p-1 rounded transition ${hideBuildIdentity ? 'text-[var(--accent-muted)] bg-[var(--accent-bg-20)]' : 'text-gray-500 hover:text-gray-300'}`}
+              title={hideBuildIdentity ? 'Show name & UID on build detail card' : 'Hide name & UID on build detail card'}
+            >
+              {hideBuildIdentity ? <MdVisibilityOff size={14} /> : <MdVisibility size={14} />}
+            </button>
+
+            {isOwnUid && focusedBuild && (
+              <div className='flex items-center gap-1 bg-gray-950/60 border border-white/10 rounded-md px-1.5 py-1'>
+                <input
+                  ref={buildNameInputRef}
+                  disabled={!promptOpen}
+                  value={promptOpen ? (renameTarget ? renameText : createText) : (displayBuildName(focusedBuild.buildName) ?? '')}
+                  maxLength={MAX_BUILD_NAME_LENGTH}
+                  placeholder={focusedBuild.isStatic ? 'New build name…' : ''}
+                  onChange={e => renameTarget ? setRenameText(e.target.value) : setCreateText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') renameTarget ? confirmRename() : confirmCreate();
+                    if (e.key === 'Escape') { setRenameTarget(null); setShowCreatePrompt(false); }
+                  }}
+                  className={`text-xs afacad-light rounded px-1.5 py-0.5 w-36 transition focus:outline-none ${promptOpen ? 'bg-gray-900/80 text-white ring-1 ring-[var(--accent-ring)]' : 'bg-transparent text-gray-500 cursor-default'}`}
+                />
+
+                {promptOpen ? (
+                  <>
+                    <button
+                      onClick={() => renameTarget ? confirmRename() : confirmCreate()}
+                      className='text-[var(--accent-muted)] hover:text-white transition p-1 rounded'
+                      title="Confirm"
+                    >
+                      <MdCheck size={14} />
+                    </button>
+                    <button
+                      onClick={() => { setRenameTarget(null); setShowCreatePrompt(false); }}
+                      className='text-gray-500 hover:text-gray-300 transition p-1 rounded'
+                      title="Cancel"
+                    >
+                      <MdClose size={14} />
+                    </button>
+                  </>
+                ) : focusedBuild.isStatic ? (
+                  <button
+                    onClick={() => { setShowCreatePrompt(true); setCreateText(''); }}
+                    className='afacad-bold text-xs px-1.5 py-0.5 rounded transition text-gray-500 hover:text-gray-300 flex items-center gap-1'
+                    title="Create a new named build for this character"
+                  >
+                    <MdAdd size={12} />
+                    New Build
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleRenameRequest(focusedBuild)}
+                      className='afacad-bold text-xs px-1.5 py-0.5 rounded transition text-gray-500 hover:text-gray-300 flex items-center gap-1'
+                      title="Edit this build's name"
+                    >
+                      <MdEdit size={12} />
+                      Edit Build
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRequest(focusedBuild)}
+                      className='afacad-bold text-xs px-1.5 py-0.5 rounded transition text-red-500/70 hover:text-red-400 flex items-center gap-1'
+                      title="Delete this build"
+                    >
+                      <MdDeleteOutline size={12} />
+                      Delete Build
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
             {isOwnUid && (
               <button
                 onClick={() => setShowManageModal(true)}
-                className='afacad-bold text-xs px-1.5 py-0.5 rounded transition text-gray-500 hover:text-gray-300'
+                className='afacad-bold text-xs px-1.5 py-0.5 rounded transition text-gray-500 hover:text-gray-300 flex items-center gap-1'
                 title="Manage builds (rename, delete, hide)"
               >
+                <MdEdit size={12} />
                 Manage
               </button>
             )}
@@ -204,32 +286,6 @@ function DashboardBuilds() {
           </div>
         </div>
       </div>
-
-      {promptOpen && (
-        <div className='w-full px-4 pb-2 shrink-0'>
-          <div className='w-full flex items-center gap-2'>
-            <span>
-              {renameTarget ? 'Rename build:' : `New build for ${focusedBuild ? (displayBuildName(focusedBuild.buildName) ?? 'character') : ''}:`}
-            </span>
-            <input
-              autoFocus
-              className='flex-1 min-w-0'
-              value={renameTarget ? renameText : createText}
-              onChange={e => renameTarget ? setRenameText(e.target.value) : setCreateText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') renameTarget ? confirmRename() : confirmCreate();
-                if (e.key === 'Escape') { setRenameTarget(null); setShowCreatePrompt(false); }
-              }}
-            />
-            <button onClick={() => renameTarget ? confirmRename() : confirmCreate()}>
-              <MdCheck />
-            </button>
-            <button onClick={() => { setRenameTarget(null); setShowCreatePrompt(false); }}>
-              <MdClose />
-            </button>
-          </div>
-        </div>
-      )}
 
       {mutationError && (
         <div className='w-full px-4 pb-2 shrink-0'>

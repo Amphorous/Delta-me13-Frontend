@@ -1,12 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IoIosArrowDown, IoIosArrowBack } from 'react-icons/io';
+import { IoIosArrowDown, IoIosArrowBack, IoIosSearch, IoIosClose } from 'react-icons/io';
 import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth, selectBgBlur } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 import { selectLoc, setLoc } from '../../store/localisationSlice';
+
+// Section reads the active search query via context instead of a prop on
+// every <Section> call site — same search string, ~8 call sites, a prop
+// would just be repeated boilerplate at each one.
+const SettingsSearchContext = React.createContext('');
 
 // ─── primitives ──────────────────────────────────────────────────────────────
 
@@ -40,7 +45,34 @@ function SettingsRow({ label, description, settingKey }) {
     );
 }
 
-function Section({ title, children }) {
+// Collapsible + searchable. Search only text-matches SettingsRow children
+// (label/description) since those are the only children with a plain string
+// to match against — custom picker rows (ThemeSelector, BgBlurSelector, ...)
+// aren't introspectable the same way, so a section built entirely from those
+// only surfaces via its own title matching. Sections default open; while a
+// search is active, matching sections force-expand (regardless of the user's
+// manual collapsed state) so results are never hidden behind a closed section,
+// and revert to that manual state once the search is cleared.
+function Section({ title, children, defaultOpen = false }) {
+    const [open, setOpen] = useState(defaultOpen);
+    const searchQuery = useContext(SettingsSearchContext);
+    const query = searchQuery.trim().toLowerCase();
+    const isSearching = query.length > 0;
+    const titleMatches = title.toLowerCase().includes(query);
+
+    const childArray = React.Children.toArray(children);
+    const visibleChildren = (!isSearching || titleMatches)
+        ? childArray
+        : childArray.filter((child) => {
+            if (child.type !== SettingsRow) return false;
+            const { label = '', description = '' } = child.props;
+            return label.toLowerCase().includes(query) || description.toLowerCase().includes(query);
+        });
+
+    if (isSearching && visibleChildren.length === 0) return null;
+
+    const expanded = isSearching ? true : open;
+
     return (
         <motion.div
             className='mb-6'
@@ -48,15 +80,36 @@ function Section({ title, children }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
         >
-            <div className='flex items-center gap-3 mb-2 px-1'>
-                <span className='text-white/55 afacad-bold text-[10px] tracking-[0.35em] uppercase select-none'>
+            <button
+                onClick={() => setOpen(o => !o)}
+                className='flex items-center gap-3 mb-2 px-1 w-full cursor-pointer select-none'
+            >
+                <span className='text-white/55 afacad-bold text-[10px] tracking-[0.35em] uppercase'>
                     {title}
                 </span>
                 <div className='flex-1 h-px bg-white/10' />
-            </div>
-            <div className='bg-gray-900/50 backdrop-blur-md rounded-xl overflow-hidden divide-y divide-white/5'>
-                {children}
-            </div>
+                <span className='text-white/40 afacad-light text-xs'>
+                    {expanded ? 'Collapse' : 'Expand'}
+                </span>
+                <motion.div animate={{ rotate: expanded ? 0 : -90 }} transition={{ duration: 0.2 }}>
+                    <IoIosArrowDown className='text-white/40' size={14} />
+                </motion.div>
+            </button>
+            <AnimatePresence initial={false}>
+                {expanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className='overflow-hidden'
+                    >
+                        <div className='bg-gray-900/50 backdrop-blur-md rounded-xl overflow-hidden divide-y divide-white/5'>
+                            {visibleChildren}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }
@@ -476,6 +529,7 @@ function Settings() {
     const widthKey = useSelector(selectSettingsWidth);
     const cardMaxW = WIDTH_CLASSES[widthKey] ?? WIDTH_CLASSES.sm;
     const navigate = useNavigate();
+    const [search, setSearch] = useState('');
 
     return (
         <div className='w-full h-full overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/35 flex justify-center p-6'>
@@ -496,7 +550,38 @@ function Settings() {
                     Re<span className='text-[var(--accent-colon)]'>:</span>muria preferences
                 </p>
 
-                <Section title="Theme">
+                {/* Pinned above the search/sections so it's never hidden by a
+                    search filter or a collapsed section — the one setting that
+                    controls whether any of the others persist at all. */}
+                <div className='bg-gray-900/50 backdrop-blur-md rounded-xl overflow-hidden mb-4'>
+                    <SettingsRow
+                        settingKey="persistSettings"
+                        label="Persist Settings"
+                        description="Save your settings to local storage so they are restored on the next visit. Turning this off clears any saved settings immediately."
+                    />
+                </div>
+
+                <div className='relative mb-6'>
+                    <IoIosSearch className='absolute left-3 top-1/2 -translate-y-1/2 text-white/40' size={16} />
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search settings…"
+                        className='w-full bg-gray-900/50 backdrop-blur-md border border-white/10 rounded-xl pl-9 pr-9 py-2.5 text-white afacad-light text-sm placeholder:text-white/35 focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]'
+                    />
+                    {search && (
+                        <button
+                            onClick={() => setSearch('')}
+                            className='absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors cursor-pointer'
+                        >
+                            <IoIosClose size={20} />
+                        </button>
+                    )}
+                </div>
+
+                <SettingsSearchContext.Provider value={search}>
+
+                <Section title="Theme" defaultOpen>
                     <ThemeSelector />
                 </Section>
 
@@ -538,6 +623,11 @@ function Settings() {
                         label="Eidolon Icon Shimmer"
                         description="Animate unlocked eidolon rank icons on the build detail card with a shimmer sweep. Off shows solid colour instead."
                     />
+                    <SettingsRow
+                        settingKey="hideBuildIdentity"
+                        label="Hide Name & UID"
+                        description="Hide the account nickname/UID watermark shown on the build detail card. Also toggleable from the builds tab's own top bar."
+                    />
                 </Section>
 
                 <Section title="Background">
@@ -549,21 +639,15 @@ function Settings() {
                     <CardBackgroundSelector />
                 </Section>
 
-                <Section title="Panel">
-                    <SettingsWidthSelector />
-                </Section>
-
                 <Section title="Dashboard Tab Pill">
                     <PillColorSelector />
                 </Section>
 
-                <Section title="Data">
-                    <SettingsRow
-                        settingKey="persistSettings"
-                        label="Persist Settings"
-                        description="Save your settings to local storage so they are restored on the next visit. Turning this off clears any saved settings immediately."
-                    />
+                <Section title="Settings Panel">
+                    <SettingsWidthSelector />
                 </Section>
+
+                </SettingsSearchContext.Provider>
 
             </div>
         </div>

@@ -115,6 +115,12 @@
     font-style: normal;
   }
 
+  .league-gothic-bold {
+    font-family: "League Gothic", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+  }
+
   .holiday-font {
     font-family: "Holiday", cursive;
     font-weight: 400;

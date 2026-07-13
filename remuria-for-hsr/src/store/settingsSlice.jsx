@@ -28,6 +28,7 @@ const defaults = {
     bgBlur: 'medium',
     rankIconShimmer: false,
     jpKanjiMode: true,
+    hideBuildIdentity: false,
 };
 
 const saved = loadFromStorage();
@@ -76,4 +77,5 @@ export const selectRelicCVShimmer = (state) => state.settings.relicCVShimmer;
 export const selectBgBlur = (state) => state.settings.bgBlur;
 export const selectRankIconShimmer = (state) => state.settings.rankIconShimmer;
 export const selectJpKanjiMode = (state) => state.settings.jpKanjiMode;
+export const selectHideBuildIdentity = (state) => state.settings.hideBuildIdentity;
 export default settingsSlice.reducer;

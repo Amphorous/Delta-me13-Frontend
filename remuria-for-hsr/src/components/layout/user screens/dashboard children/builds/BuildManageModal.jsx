@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdClose, MdEdit, MdDeleteOutline, MdVisibility, MdVisibilityOff, MdCheck } from 'react-icons/md';
 import { getAllBuilds, renameBuild, deleteBuild, hideBuild } from '../../../../../utils/buildsApi';
 import { useTranslatedHash } from '../../../../../utils/hashTranslation';
-import { characterIconUrl, handleCharacterIconError, displayBuildName } from './buildConstants';
+import { characterIconUrl, handleCharacterIconError, displayBuildName, MAX_BUILD_NAME_LENGTH } from './buildConstants';
 
 // One row: character face + name (buildName, or the character's own name for
 // unnamed/static builds), with inline rename/hide/delete — no navigation away
@@ -81,6 +81,7 @@ function ManageRow({ uid, build, onMutated }) {
         <input
           autoFocus
           value={renameText}
+          maxLength={MAX_BUILD_NAME_LENGTH}
           onChange={(e) => setRenameText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') confirmRename();
