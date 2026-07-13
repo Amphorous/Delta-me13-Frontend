@@ -101,6 +101,11 @@ export function deriveDisplayStats(rawStats, statNames) {
 // BuildNode.buildName defaults to this sentinel when a build has never been named.
 export const DEFAULT_BUILD_NAME = 'perhaps_feixiao';
 
+// Mirrors the backend's own limit (BuildService.editBuildName) — enforced
+// here too so the input can't even be typed past it, not just rejected after
+// a round trip.
+export const MAX_BUILD_NAME_LENGTH = 32;
+
 export function displayBuildName(buildName) {
   return buildName && buildName !== DEFAULT_BUILD_NAME ? buildName : null;
 }

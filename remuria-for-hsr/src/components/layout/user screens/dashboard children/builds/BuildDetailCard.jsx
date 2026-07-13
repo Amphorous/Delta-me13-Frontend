@@ -6,7 +6,7 @@ import tinycolor from 'tinycolor2';
 import { characterIconUrl, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl } from './buildConstants';
 import useCutinGradient from './useCutinGradient';
 import { useTranslatedHash } from '../../../../../utils/hashTranslation';
-import { selectRankIconShimmer } from '../../../../../store/settingsSlice';
+import { selectRankIconShimmer, selectHideBuildIdentity } from '../../../../../store/settingsSlice';
 import { selectLoc } from '../../../../../store/localisationSlice';
 
 // Vertex (corner) notches, positioned at the 4 corners of the
@@ -151,7 +151,11 @@ const NAME_FONT_CLASS_BY_LOCALE = {
 
 function BuildDetailCard({ build, skinIndex = 0 }) {
   const rankIconShimmerEnabled = useSelector(selectRankIconShimmer);
+  const hideBuildIdentity = useSelector(selectHideBuildIdentity);
   const locale = useSelector(selectLoc);
+  // The dashboard-page account being viewed, not this build's own data —
+  // same store slice + access pattern UserCard/UserLongCard/Dashboard use.
+  const focusedUser = useSelector(state => state.focusedUser);
   // null for locales that use the regular League Gothic/Holiday treatment.
   const localeFontClass = NAME_FONT_CLASS_BY_LOCALE[locale] ?? null;
   const captureRef = useRef(null);
@@ -378,47 +382,83 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
         className='relative aspect-[21/10] w-[min(100cqw,210cqh)] flex overflow-hidden rounded-3xl ring-1 ring-white/10'
         style={{ background: gradientCss, ...cornerMaskStyle }}
       >
-        {/* cutin art, centered on the empty strip the info panel leaves
-            uncovered. Empty strip = leftmost 15% (100% - the info panel's
-            w-[85%] below), so its centre sits at 7.5% of the card width;
-            left-[7.5%] -translate-x-1/2 puts this box's own centre there
-            (a few % further right for RIGHT_SHIFTED_AVATARS, whose art draws
-            the character left-of-centre). aspect-square is applied to this
-            plain div (well-supported), not to the <img> directly —
-            aspect-ratio on an absolutely positioned *replaced* element (img)
-            turned out not to reliably size from h-full in testing, which is
-            what caused the image to render at only the width of a narrower
-            wrapper instead of bleeding under the info panel for
-            backdrop-blur to pick up. The img itself now just fills this
-            pre-sized box with plain w-full h-full. */}
-        <div className={`absolute h-full aspect-square -translate-x-1/2 ${cutinLeftClass} ${cutinTopClass}`}>
-          {/* key={cutinSrc} forces a fresh <img> per character/skin instead of
-              reusing one — reusing it means the browser keeps painting the OLD
-              src's decoded frame until the new one finishes loading, which is
-              exactly the "previous character lingers" bug. With a fresh node,
-              nothing renders until this cutin's own onLoad fires, and the
-              spinner covers that gap. */}
-          {cutinSrc && (
-            <img
-              key={cutinSrc}
-              src={cutinSrc}
-              alt=""
-              crossOrigin="anonymous"
-              className={`w-full h-full object-cover transition-opacity duration-150 ${cutinLoaded ? 'opacity-100' : 'opacity-0'}`}
-              onLoad={() => setCutinLoaded(true)}
-              onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
-            />
-          )}
-          {!cutinLoaded && (
-            <div className='absolute inset-0 flex items-center justify-center'>
-              <CgSpinner className='animate-spin text-white/70' size={28} />
-            </div>
-          )}
+        {/* Negative space left by justifying the info panel to the right
+            (its own box spans the full card, but its visible w-[85%]
+            content below is pushed to that side) — houses the cutin at an
+            explicit lower z-index than the info panel (z-10), so the blur
+            panel can still sample/blur it from behind exactly as when it
+            was a bare sibling here, plus the level tag. */}
+        <div className='absolute inset-0 z-0'>
+          {/* cutin art, centered on the empty strip the info panel leaves
+              uncovered. Empty strip = leftmost 15% (100% - the info panel's
+              w-[85%] below), so its centre sits at 7.5% of the card width;
+              left-[7.5%] -translate-x-1/2 puts this box's own centre there
+              (a few % further right for RIGHT_SHIFTED_AVATARS, whose art draws
+              the character left-of-centre). aspect-square is applied to this
+              plain div (well-supported), not to the <img> directly —
+              aspect-ratio on an absolutely positioned *replaced* element (img)
+              turned out not to reliably size from h-full in testing, which is
+              what caused the image to render at only the width of a narrower
+              wrapper instead of bleeding under the info panel for
+              backdrop-blur to pick up. The img itself now just fills this
+              pre-sized box with plain w-full h-full. */}
+          <div className={`absolute h-full aspect-square -translate-x-1/2 ${cutinLeftClass} ${cutinTopClass}`}>
+            {/* key={cutinSrc} forces a fresh <img> per character/skin instead of
+                reusing one — reusing it means the browser keeps painting the OLD
+                src's decoded frame until the new one finishes loading, which is
+                exactly the "previous character lingers" bug. With a fresh node,
+                nothing renders until this cutin's own onLoad fires, and the
+                spinner covers that gap. */}
+            {cutinSrc && (
+              <img
+                key={cutinSrc}
+                src={cutinSrc}
+                alt=""
+                crossOrigin="anonymous"
+                className={`w-full h-full object-cover transition-opacity duration-150 ${cutinLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setCutinLoaded(true)}
+                onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+              />
+            )}
+            {!cutinLoaded && (
+              <div className='absolute inset-0 flex items-center justify-center'>
+                <CgSpinner className='animate-spin text-white/70' size={28} />
+              </div>
+            )}
+          </div>
+
+          {/* Level tag: a small pill using the darkest stop of this build's
+              own gradient as its background, centred in the empty strip
+              itself (not the whole card, which would land it awkwardly
+              under the blur panel). */}
+          <div className='absolute inset-y-0 left-0 w-[15%] flex items-center justify-center [container-type:size]'>
+            {build?.level !== undefined && (
+              <>
+                {/* Same "duplicate rendered behind, offset toward the
+                    top-right, tinted with this build's own darkest gradient
+                    stop" treatment as the KR/JP name duplicates below — same
+                    offset amount too. Placed first so it paints underneath
+                    (same-stacking-level siblings paint in source order). */}
+                <span
+                  className='league-gothic-bold border-t-2 border-x-2 border-white/0 border-dashed text-[30cqw] leading-none px-3 py-1 w-full rounded-t-md select-none pointer-events-none absolute bottom-0 left-1/2'
+                  style={{ color: gradientStops[gradientStops.length - 1], transform: 'translateX(-50%) translate(1.8cqw, -0.3cqh)' }}
+                >
+                  Lv. {build.level}
+                </span>
+                <span
+                  className='league-gothic-bold border-t-2 border-x-2 border-white/0 border-dashed text-white
+                   text-[30cqw] leading-none px-3 py-1 w-full rounded-t-md select-none pointer-events-none absolute bottom-0
+                    left-1/2 -translate-x-1/2'
+                >
+                  Lv. {build.level}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* info panel */}
         <div className='relative z-10 w-full h-full flex justify-end'>
-
           <div className='w-[85%] h-full flex [container-type:size]'>
             <div
               ref={cutoutsRef}
@@ -435,6 +475,16 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
                   />
                 ))}
               </div>
+
+              {!hideBuildIdentity && (
+                <div
+                  className='absolute top-[0.7%] right-[3%] afacad-light text-[2.1cqh]'
+                  style={{ color: tinycolor(cardAccentColor).setAlpha(0.65).toRgbString() }}
+                >
+                  {focusedUser?.nickname} {focusedUser?.uid}
+                </div>
+              )}
+
             </div>
 
             <div className='m-2 flex-grow flex flex-col [container-type:size]'>
@@ -476,12 +526,46 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
                     is a hard backstop so long names clip cleanly instead of
                     bleeding into the row above.
                     Barcode removed for now (added back manually later). */}
-                <div className='relative h-full flex items-center justify-center'>
+                {/* w-full here matters: this div is the containing block the
+                    name span(s) below resolve their absolute left:50% against.
+                    Without it, a flex item with only out-of-flow (absolute)
+                    children has no in-flow content to size itself from, so it
+                    collapses toward 0 width — left:50% of a ~0-width box
+                    degenerates to a single point, and -translate-x-1/2 (half
+                    of the *name span's own* width) then anchors the span's
+                    RIGHT edge there instead of truly centring it, dragging the
+                    whole column left by its own half-width. That shift is the
+                    same for every name, but it reads as worse on long/tall
+                    columns since the eye notices an off-centre vertical
+                    stripe more easily than a short one. w-full gives left:50%
+                    a real reference point (the actual centre of stylised-name)
+                    so -translate-x-1/2 centres correctly regardless of length. */}
+                <div className='relative w-full h-full flex items-center justify-center'>
 
                   {!localeFontClass && (
                     <span
                       className={`holiday-font vertical-text whitespace-nowrap ${(nameText?.length ?? 0) > 15 ? 'text-[9cqh]' : 'text-[10cqh]'}`}
                       style={{ color: cardAccentColor }}
+                    >
+                      {nameText}
+                    </span>
+                  )}
+                  {/* Korean and Japanese get a second, offset copy of the
+                      name rendered behind the main one — same idea as the
+                      League Gothic/Holiday layered treatment for Latin
+                      locales, but as a duplicate-with-offset instead of a
+                      font pairing, tinted with this build's own adaptive
+                      accent colour instead of plain white. Placed before the
+                      main span in DOM order so it paints underneath
+                      (same-stacking-level siblings paint in source order).
+                      translate is spelled out by hand here (not the
+                      -translate-x/y-1/2 utilities) since it needs to compose
+                      the usual -50%/-50% centring with a small extra
+                      top-right nudge in the same transform. */}
+                  {(locale === 'kr' || locale === 'jp') && (
+                    <span
+                      className={`${localeFontClass} vertical-text absolute top-1/2 left-1/2 text-[15cqh] whitespace-nowrap select-none pointer-events-none`}
+                      style={{ color: cardAccentColor, transform: 'translate(-50%, -50%) translate(2.8cqw, -0.5cqh)' }}
                     >
                       {nameText}
                     </span>
