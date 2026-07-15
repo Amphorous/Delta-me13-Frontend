@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LuUsersRound } from 'react-icons/lu';
 import { CgSpinner } from 'react-icons/cg';
@@ -6,7 +6,7 @@ import tinycolor from 'tinycolor2';
 import { characterIconUrl, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl } from './buildConstants';
 import useCutinGradient from './useCutinGradient';
 import { useTranslatedHash } from '../../../../../utils/hashTranslation';
-import { selectRankIconShimmer, selectHideBuildIdentity } from '../../../../../store/settingsSlice';
+import { selectRankIconShimmer, selectHideBuildIdentity, selectBuildCardStarfield } from '../../../../../store/settingsSlice';
 import { selectLoc } from '../../../../../store/localisationSlice';
 
 // Vertex (corner) notches, positioned at the 4 corners of the
@@ -108,6 +108,7 @@ const CUTIN_LEFT_BY_AVATAR = {
   1414: 'left-[9%]',
   1501: 'left-[8.5%]',
   1502: 'left-[11.5%]',
+  1510: 'left-[11%]',
 };
 
 // Same idea, vertical axis — a handful of cutins sit slightly high/low in
@@ -123,7 +124,54 @@ const GRADIENT_OVERRIDE_BY_AVATAR = {
   1408: ['#94a3b8', '#475569', '#1e293b', '#020617'], // cool gray -> black
   1414: ['#14746b', '#0d4e47', '#082e2a', '#020806'], // deep jade-teal -> black (robe/sash, not the gold backdrop motif)
   1415: ['#16245c', '#3f2b7d', '#83377f', '#c25585'], // deep blue -> pink
+  1510: ['#350403', '#6a0706', '#6a0706', '#9f0b09'], // himkin 000100
+  //1510: ['#350403', '#6a0706', '#9f0b09', '#d30e0c'], // himkin 000100
 };
+
+const STARFIELD_AVATAR_ID = 1510;
+const STARFIELD_COUNT = 2000;
+const STARFIELD_MIN_SIZE = 1.5; // px
+const STARFIELD_MAX_SIZE = 4.5; // px
+const STARFIELD_MIN_OPACITY = 0.3;
+const STARFIELD_MAX_OPACITY = 0.7;
+// as one shape stamped many times.
+const STARFIELD_MIN_WAIST = 7;
+const STARFIELD_MAX_WAIST = 17;
+// side instead of vanishing.
+const STARFIELD_WHITE_ZONE_PCT = 90;
+
+function starClipPath(waist) {
+  const near = 50 - waist;
+  const far = 50 + waist;
+  return `polygon(50% 0%, ${far}% ${near}%, 100% 50%, ${far}% ${far}%, 50% 100%, ${near}% ${far}%, 0% 50%, ${near}% ${near}%)`;
+}
+
+// White up to STARFIELD_WHITE_ZONE_PCT, then linearly fades to black by the
+// right edge — a plain per-channel lerp (white and black share all 3
+// channels, so one grayscale value covers it) rather than pulling in a colour
+// library for a single-axis fade.
+function starColorForLeftPct(leftPct) {
+  if (leftPct <= STARFIELD_WHITE_ZONE_PCT) return '#ffffff';
+  const t = Math.min((leftPct - STARFIELD_WHITE_ZONE_PCT) / (100 - STARFIELD_WHITE_ZONE_PCT), 1);
+  const channel = Math.round(255 * (1 - t)).toString(16).padStart(2, '0');
+  return `#${channel}${channel}${channel}`;
+}
+
+function generateStarfield() {
+  return Array.from({ length: STARFIELD_COUNT }, () => {
+    const leftPct = Math.random() * 100;
+    return {
+      left: `${leftPct.toFixed(2)}%`,
+      top: `${(Math.random() * 100).toFixed(2)}%`,
+      size: STARFIELD_MIN_SIZE + Math.random() * (STARFIELD_MAX_SIZE - STARFIELD_MIN_SIZE),
+      opacity: STARFIELD_MIN_OPACITY + Math.random() * (STARFIELD_MAX_OPACITY - STARFIELD_MIN_OPACITY),
+      // 0-90deg covers every unique orientation of a 4-point star (90° rotational symmetry).
+      rotation: Math.random() * 90,
+      clipPath: starClipPath(STARFIELD_MIN_WAIST + Math.random() * (STARFIELD_MAX_WAIST - STARFIELD_MIN_WAIST)),
+      color: starColorForLeftPct(leftPct),
+    };
+  });
+}
 
 // Post-extraction tone adjustments for characters whose extracted HUE is right
 // but the tone is off — full overrides above are for when the hue itself is
@@ -152,6 +200,7 @@ const NAME_FONT_CLASS_BY_LOCALE = {
 function BuildDetailCard({ build, skinIndex = 0 }) {
   const rankIconShimmerEnabled = useSelector(selectRankIconShimmer);
   const hideBuildIdentity = useSelector(selectHideBuildIdentity);
+  const starfieldEnabled = useSelector(selectBuildCardStarfield);
   const locale = useSelector(selectLoc);
   // The dashboard-page account being viewed, not this build's own data —
   // same store slice + access pattern UserCard/UserLongCard/Dashboard use.
@@ -226,6 +275,18 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
 
   const cutinLeftClass = CUTIN_LEFT_BY_AVATAR[build?.avatarId] ?? CUTIN_LEFT_DEFAULT;
   const cutinTopClass = CUTIN_TOP_BY_AVATAR[build?.avatarId] ?? CUTIN_TOP_DEFAULT;
+
+  // Regenerated only when the avatar or the setting actually changes (not on
+  // every render, e.g. from rankIconRects/cutinLoaded state updates) —
+  // re-rolling positions on every render would read as flicker instead of a
+  // fixed starfield. Off by default (buildCardStarfield setting) since 2000
+  // clip-path divs is a real render cost some users won't want paying for a
+  // decorative effect on one character's card.
+  const isStarfieldAvatar = starfieldEnabled && String(build?.avatarId) === String(STARFIELD_AVATAR_ID);
+  const starfield = useMemo(
+    () => (isStarfieldAvatar ? generateStarfield() : null),
+    [isStarfieldAvatar]
+  );
 
   const pathIcon = pathIconUrl(build?.avatarInfo?.AvatarBaseType);
   const elementIcon = elementIconUrl(build?.avatarInfo?.Element);
@@ -389,6 +450,31 @@ function BuildDetailCard({ build, skinIndex = 0 }) {
             panel can still sample/blur it from behind exactly as when it
             was a bare sibling here, plus the level tag. */}
         <div className='absolute inset-0 z-0'>
+          {/* Starfield — 1510 only (see STARFIELD_AVATAR_ID). Painted first
+              inside this wrapper so plain DOM order puts it under the cutin
+              box below (both are unpositioned-by-z-index siblings here), while
+              still sitting above the outer card's own gradient background. */}
+          {starfield && (
+            <div className='absolute inset-0 overflow-hidden pointer-events-none'>
+              {starfield.map((star, i) => (
+                <div
+                  key={i}
+                  className='absolute'
+                  style={{
+                    left: star.left,
+                    top: star.top,
+                    width: star.size,
+                    height: star.size,
+                    opacity: star.opacity,
+                    backgroundColor: star.color,
+                    clipPath: star.clipPath,
+                    transform: `translate(-50%, -50%) rotate(${star.rotation}deg)`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
           {/* cutin art, centered on the empty strip the info panel leaves
               uncovered. Empty strip = leftmost 15% (100% - the info panel's
               w-[85%] below), so its centre sits at 7.5% of the card width;

@@ -29,6 +29,7 @@ const defaults = {
     rankIconShimmer: false,
     jpKanjiMode: true,
     hideBuildIdentity: false,
+    buildCardStarfield: false,
 };
 
 const saved = loadFromStorage();
@@ -78,4 +79,5 @@ export const selectBgBlur = (state) => state.settings.bgBlur;
 export const selectRankIconShimmer = (state) => state.settings.rankIconShimmer;
 export const selectJpKanjiMode = (state) => state.settings.jpKanjiMode;
 export const selectHideBuildIdentity = (state) => state.settings.hideBuildIdentity;
+export const selectBuildCardStarfield = (state) => state.settings.buildCardStarfield;
 export default settingsSlice.reducer;

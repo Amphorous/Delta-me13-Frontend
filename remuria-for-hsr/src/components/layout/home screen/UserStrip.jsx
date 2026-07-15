@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import avatars from '../../../assets/pfps.json'
+import { usePfpUrl, handlePfpImgError } from '../../../utils/pfps';
 import { MdDelete } from "react-icons/md";
 import { useDispatch, useSelector } from 'react-redux';
 import { removeUser } from '../../../store/localUsersSlice';
@@ -28,13 +28,10 @@ function UserStrip({user, setCardState}) {
         dispatch(removeUser(uid));
     }
 
-    function profileImageGetter(headIcon){
-        //console.log(avatars[`${headIcon}`]) //200001
-        if(avatars[`${headIcon}`] !== undefined){
-            return "https://enka.network"+avatars[`${headIcon}`]['Icon'];
-        }
-        return "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
-    }
+    // headIcon -> URL now resolves via the backend's Redis-served pfps map
+    // (fetch-once, module-cached in utils/pfps) instead of a bundled JSON that
+    // went stale on every game version update.
+    const pfpUrl = usePfpUrl(user.headIcon);
 
     function regionColourPicker(region){
         switch(region){
@@ -70,15 +67,8 @@ function UserStrip({user, setCardState}) {
         }
 
         <div className={`flex items-center min-w-0 flex-1 transition-all duration-150 ${hovered ? 'pl-7' : 'pl-0'}`}>
-            <img src={profileImageGetter(user.headIcon)} className='w-9 h-9 aspect-square bg-black/20 rounded-full shrink-0'
-                onError={(e) => {
-                    const anon = "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
-                    if (e.target.src.includes("/Series/")) {
-                        e.target.src = e.target.src.replace("/Series/", "/");
-                    } else if (e.target.src !== anon) {
-                        e.target.src = anon;
-                    }
-                }}
+            <img src={pfpUrl} className='w-9 h-9 aspect-square bg-black/20 rounded-full shrink-0'
+                onError={handlePfpImgError}
             />
             <div className="flex flex-col pl-2.5 justify-center min-w-0">
                 <p className="afacad-semi-bold text-white text-base leading-tight

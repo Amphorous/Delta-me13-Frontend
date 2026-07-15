@@ -2,7 +2,7 @@ import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { removeFocus, setFocus } from '../../../store/userCardSlice';
-import avatars from '../../../assets/pfps.json';
+import { usePfpUrl, handlePfpImgError } from '../../../utils/pfps';
 import ach from '../../../assets/achievementIcon.webp';
 import { cardBackgroundImages } from '../../../assets/backgroundImages';
 import { selectCardBackgroundImageKey } from '../../../store/settingsSlice';
@@ -13,6 +13,7 @@ import { IoMdClose } from "react-icons/io";
 import { ImEyeBlocked } from "react-icons/im";
 import { useCutouts } from '../../CutoutUtil';
 import ExpandableRefreshButton from '../../ExpandableRefreshButton';
+import RefreshWarningBanner from '../../RefreshWarningBanner';
 
 const TL_CUTOUT_PADDING = 4;
 
@@ -33,6 +34,8 @@ function UserCard({uid, showButtons}) {
 
     const [isRefreshPossible, setIsRefreshPossible] = useState(true);
     const [isRefreshButtonActive, setIsRefreshButtonActive] = useState(true);
+    // { type: 'warning' | 'error', text } — refresh partial-success/failure banner
+    const [refreshWarning, setRefreshWarning] = useState(null);
 
     const tlRef = useRef(null);
     const borderRef = useRef(null);
@@ -149,13 +152,10 @@ function UserCard({uid, showButtons}) {
         dispatch(removeFocus());
     }
 
-    function profileImageGetter(headIcon){
-        //console.log(avatars[`${headIcon}`]) //200001
-        if(avatars[`${headIcon}`] !== undefined){
-            return "https://enka.network"+avatars[`${headIcon}`]['Icon'];
-        }
-        return "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
-    }
+    // headIcon -> URL now resolves via the backend's Redis-served pfps map
+    // (fetch-once, module-cached in utils/pfps) instead of a bundled JSON that
+    // went stale on every game version update.
+    const pfpUrl = usePfpUrl(focusedUser?.headIcon);
 
     function regionColourPicker(region){
         switch(region){
@@ -171,11 +171,26 @@ function UserCard({uid, showButtons}) {
 
     function upsertUserRequest(uid){
         setIsRefreshButtonActive(false);
+        setRefreshWarning(null);
         setTimeoutValue(-60);
         if(isRefreshPossible){
             axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/refresh/${uid}`)
                 .then((res) => {
-                    if(res.data){
+                    // res.data used to be a bare boolean; it's now an
+                    // UpsertResultDTO object — accept both shapes so a mixed
+                    // deploy (old backend, new frontend) still works.
+                    if(res.data === true || res.data?.success){
+
+                        // partial success: some characters use game assets the
+                        // backend doesn't support yet and were skipped —
+                        // surface that, but still treat the refresh as a success.
+                        if(res.data?.partial){
+                            setRefreshWarning({
+                                type: 'warning',
+                                text: res.data.warnings?.join(' ')
+                                    || 'Some characters use new game assets that are not yet supported; data was partially updated.',
+                            });
+                        }
 
                         axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/noRefresh/${uid}`)
                         .then((res) => {
@@ -203,10 +218,15 @@ function UserCard({uid, showButtons}) {
                         })
                     } else {
                         //console.log("subloading failed in the backend it seems")
+                        setIsRefreshButtonActive(true);
                     }
                 })
                 .catch((err) => {
                     //console.log(err)
+                    setRefreshWarning({
+                        type: 'error',
+                        text: 'Refresh failed. New game content may not be supported yet — try again later.',
+                    });
                     setIsRefreshButtonActive(true);
                 })
         } else {
@@ -260,15 +280,8 @@ function UserCard({uid, showButtons}) {
 
                     <div className="cardbody flex flex-col w-full ">
                         <div className="flex nameandpfpbox ml-7 mr-5 mt-5 items-center ">
-                            <img src={profileImageGetter(focusedUser?.headIcon)} className='h-full aspect-square bg-black/12 rounded-full'
-                                onError={(e) => {
-                                    const anon = "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
-                                    if (e.target.src.includes("/Series/")) {
-                                        e.target.src = e.target.src.replace("/Series/", "/");
-                                    } else if (e.target.src !== anon) {
-                                        e.target.src = anon;
-                                    }
-                                }}
+                            <img src={pfpUrl} className='h-full aspect-square bg-black/12 rounded-full'
+                                onError={handlePfpImgError}
                             />
                             <div className="flex flex-col overflow-hidden text-ellipsis">
                                 <p className="libre-baskerville-bold text-white text-[300%]
@@ -360,7 +373,13 @@ function UserCard({uid, showButtons}) {
             <div className="absolute bottom-0 left-0 vertical-text barcode-font mb-2 text-white/42">{uid}</div>
 
         </motion.div>
-        
+
+        {/* refresh partial-success / failure banner — outside the tilting
+            motion.div so it doesn't ride the 3D hover transform */}
+        <div className='empty:hidden [&:not(:empty)]:mt-3'>
+            <RefreshWarningBanner warning={refreshWarning} onDismiss={() => setRefreshWarning(null)} />
+        </div>
+
     </div>
   )
 }

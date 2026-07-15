@@ -628,6 +628,11 @@ function Settings() {
                         label="Hide Name & UID"
                         description="Hide the account nickname/UID watermark shown on the build detail card. Also toggleable from the builds tab's own top bar."
                     />
+                    <SettingsRow
+                        settingKey="buildCardStarfield"
+                        label="Build Card Starfield"
+                        description="Show a decorative starfield behind the cutin on build detail cards that support it."
+                    />
                 </Section>
 
                 <Section title="Background">

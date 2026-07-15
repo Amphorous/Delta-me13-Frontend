@@ -2,7 +2,7 @@ import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { removeFocus, setFocus } from '../../../store/userCardSlice';
-import avatars from '../../../assets/pfps.json';
+import { usePfpUrl, handlePfpImgError } from '../../../utils/pfps';
 import ach from '../../../assets/achievementIcon.webp';
 import { cardBackgroundImages } from '../../../assets/backgroundImages';
 import { selectCardBackgroundImageKey } from '../../../store/settingsSlice';
@@ -12,6 +12,7 @@ import { ImEyeBlocked } from "react-icons/im";
 import PillSlidingSelectBar from './dashboard slider/PillSlidingSelectBar';
 import { useCutouts } from '../../CutoutUtil';
 import ExpandableRefreshButton from '../../ExpandableRefreshButton';
+import RefreshWarningBanner from '../../RefreshWarningBanner';
 
 function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRefreshComplete }) {
 
@@ -25,6 +26,8 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
     const [isRefreshPossible, setIsRefreshPossible] = useState(true);
     const [isRefreshButtonActive, setIsRefreshButtonActive] = useState(true);
     const [timeout, setTimeoutValue] = useState(0);
+    // { type: 'warning' | 'error', text } — refresh partial-success/failure banner
+    const [refreshWarning, setRefreshWarning] = useState(null);
 
     const cardRef = useRef(null);
     const dividerRef = useRef(null);
@@ -77,6 +80,10 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
     }, [uid]);
 
     useEffect(() => {
+        console.log("Focused User: ", focusedUser);
+    }, [focusedUser]);
+
+    useEffect(() => {
         const interval = setInterval(() => {
             setTimeoutValue((prev) => {
                 setIsRefreshPossible(prev >= 0);
@@ -86,12 +93,10 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
         return () => clearInterval(interval);
     }, []);
 
-    function profileImageGetter(headIcon) {
-        if (avatars[`${headIcon}`] !== undefined) {
-            return "https://enka.network" + avatars[`${headIcon}`]['Icon'];
-        }
-        return "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
-    }
+    // headIcon -> URL now resolves via the backend's Redis-served pfps map
+    // (fetch-once, module-cached in utils/pfps) instead of a bundled JSON that
+    // went stale on every game version update.
+    const pfpUrl = usePfpUrl(focusedUser?.headIcon);
 
     function regionColourPicker(region) {
         switch (region) {
@@ -107,11 +112,25 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
 
     function upsertUserRequest(uid) {
         setIsRefreshButtonActive(false);
+        setRefreshWarning(null);
         setTimeoutValue(-60);
         if (isRefreshPossible) {
             axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/refresh/${uid}`)
                 .then((res) => {
-                    if (res.data) {
+                    // res.data used to be a bare boolean; it's now an
+                    // UpsertResultDTO object — accept both shapes so a mixed
+                    // deploy (old backend, new frontend) still works.
+                    if (res.data === true || res.data?.success) {
+                        // partial success: some characters use game assets the
+                        // backend doesn't support yet and were skipped —
+                        // surface that, but still treat the refresh as a success.
+                        if (res.data?.partial) {
+                            setRefreshWarning({
+                                type: 'warning',
+                                text: res.data.warnings?.join(' ')
+                                    || 'Some characters use new game assets that are not yet supported; data was partially updated.',
+                            });
+                        }
                         axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/noRefresh/${uid}`)
                             .then((res) => {
                                 const userObj = {
@@ -130,9 +149,17 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
                                 onRefreshComplete?.();
                             })
                             .catch(() => setIsRefreshButtonActive(true));
+                    } else {
+                        setIsRefreshButtonActive(true);
                     }
                 })
-                .catch(() => setIsRefreshButtonActive(true));
+                .catch(() => {
+                    setRefreshWarning({
+                        type: 'error',
+                        text: 'Refresh failed. New game content may not be supported yet — try again later.',
+                    });
+                    setIsRefreshButtonActive(true);
+                });
         } else {
             setIsRefreshButtonActive(true);
         }
@@ -168,16 +195,9 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
 
                 {/* avatar */}
                 <img
-                    src={profileImageGetter(focusedUser?.headIcon)}
+                    src={pfpUrl}
                     className="w-14 h-14 rounded-full bg-black/20 shrink-0 ring-1 ring-white/10"
-                    onError={(e) => {
-                        const anon = "https://enka.network/ui/hsr/SpriteOutput/AvatarRoundIcon/UI_Message_Contacts_Anonymous.png";
-                        if (e.target.src.includes("/Series/")) {
-                            e.target.src = e.target.src.replace("/Series/", "/");
-                        } else if (e.target.src !== anon) {
-                            e.target.src = anon;
-                        }
-                    }}
+                    onError={handlePfpImgError}
                 />
 
                 {/* name / sig / badges */}
@@ -256,6 +276,11 @@ function UserLongCard({ uid, rightDisplaySelector, setRightDisplaySelector, onRe
                     </p>
                 </div>
 
+            </div>
+
+            {/* refresh partial-success / failure banner */}
+            <div className='relative z-10 mx-6 empty:hidden [&:not(:empty)]:mb-2'>
+                <RefreshWarningBanner warning={refreshWarning} onDismiss={() => setRefreshWarning(null)} />
             </div>
 
             {/* UID barcode — outside dashed border, center-left gap */}

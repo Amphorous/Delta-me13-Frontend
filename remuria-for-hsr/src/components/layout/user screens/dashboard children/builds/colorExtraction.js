@@ -4,14 +4,44 @@
 
 export const SAMPLE_SIZE = 64;
 
+// Same Enka AvatarRoundIcon /Series//Avatar/ subfolder inconsistency that
+// handleCharacterIconError/handlePfpImgError patch reactively via <img
+// onError> — a URL like ".../AvatarRoundIcon/Avatar/1510.png" can 404 even
+// though ".../AvatarRoundIcon/1510.png" resolves. This loader builds its own
+// off-DOM Image() to read pixels rather than rendering a real <img>, so it
+// can't rely on onError and needs the same one-level-up retry itself. Without
+// this, a 404 here silently rejects the whole extraction and the caller
+// (useCutinGradient) falls back to its neutral gray FALLBACK_GRADIENT_STOPS —
+// which is indistinguishable from "the character is just dark-themed" unless
+// you already know to suspect a failed fetch.
+function nextIconUrlFallback(url) {
+  if (url.includes('/AvatarRoundIcon/Series/')) return url.replace('/AvatarRoundIcon/Series/', '/AvatarRoundIcon/');
+  if (url.includes('/AvatarRoundIcon/Avatar/')) return url.replace('/AvatarRoundIcon/Avatar/', '/AvatarRoundIcon/');
+  return null;
+}
+
+async function loadImage(url) {
+  let currentUrl = url;
+  for (;;) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = currentUrl;
+      });
+      return img;
+    } catch (e) {
+      const fallback = nextIconUrlFallback(currentUrl);
+      if (!fallback) throw e;
+      currentUrl = fallback;
+    }
+  }
+}
+
 export async function loadImagePixels(url, size = SAMPLE_SIZE) {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = reject;
-    img.src = url;
-  });
+  const img = await loadImage(url);
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
