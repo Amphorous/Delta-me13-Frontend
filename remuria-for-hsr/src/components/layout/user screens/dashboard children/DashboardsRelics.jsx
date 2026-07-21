@@ -23,6 +23,7 @@ import footIcon from "../../../../assets/relicIcons/IconRelicFoot.png"
 import neckIcon from "../../../../assets/relicIcons/IconRelicNeck.png"
 import goodsIcon from "../../../../assets/relicIcons/IconRelicGoods.png"
 import loadFail from "../../../../assets/Loading Failed.png"
+import { subsequenceMatch } from '../../../../utils/fuzzyMatch';
 
 const SLOT_OPTIONS = [
   { label: 'Head',   value: '1', icon: headIcon },
@@ -42,14 +43,6 @@ function resolveStatType(value) {
     if (entry.labels.some(l => v.startsWith(l) || l.startsWith(v))) return entry.type;
   }
   return null;
-}
-
-function subsequenceMatch(query, candidate) {
-  const q = query.toLowerCase(), c = candidate.toLowerCase();
-  let qi = 0;
-  for (let ci = 0; ci < c.length && qi < q.length; ci++)
-    if (c[ci] === q[qi]) qi++;
-  return qi === q.length;
 }
 
 function DashboardsRelics() {

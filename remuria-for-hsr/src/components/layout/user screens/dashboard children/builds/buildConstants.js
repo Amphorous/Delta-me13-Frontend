@@ -153,3 +153,79 @@ export function pathIconUrl(avatarBaseType) {
 export function elementIconUrl(element) {
   return element ? (TYPE_ICONS[element] ?? null) : null;
 }
+
+// AvatarBaseType is HSR's internal dev name for a Path, not what the game
+// actually calls it (e.g. a build with AvatarBaseType "Warrior" is Destruction
+// path) — this is the display-name mapping for every AvatarBaseType value
+// that has an icon under path_icons/. Element's raw enum values (Fire, Ice,
+// ...) already match their real in-game names, so no equivalent map is needed
+// there.
+const PATH_DISPLAY_NAMES = {
+  Elation: 'Elation',
+  Mage: 'Erudition',
+  Priest: 'Abundance',
+  Shaman: 'Harmony',
+  Warrior: 'Destruction',
+  Knight: 'Preservation',
+  Memory: 'Remembrance',
+  Rogue: 'Hunt',
+  Warlock: 'Nihility',
+};
+
+// Path/Element filter option lists — same { label, value, icon } shape as the
+// relic Slot filter's SLOT_OPTIONS (DashboardsRelics.jsx/RelicFilterHelp.jsx),
+// but derived from PATH_ICONS/TYPE_ICONS instead of hardcoded, so a future HSR
+// path/element automatically appears here the moment its icon asset is added,
+// no list to maintain by hand. `value` stays the raw AvatarBaseType/Element
+// string (what the API/pathIconUrl/elementIconUrl key off); `label` is the
+// real display name, so fuzzy search (see DashboardBuilds.jsx) matches what
+// the user actually knows the path as ("Destruction") rather than the
+// internal dev name ("Warrior") — falls back to the raw value for a path
+// that's missing from PATH_DISPLAY_NAMES (shouldn't happen, but safer than
+// rendering "undefined").
+export const PATH_OPTIONS = Object.entries(PATH_ICONS).map(([value, icon]) => ({
+  label: PATH_DISPLAY_NAMES[value] ?? value,
+  value,
+  icon,
+}));
+export const ELEMENT_OPTIONS = Object.entries(TYPE_ICONS).map(([value, icon]) => ({ label: value, value, icon }));
+
+// Weapon-name label font options (Settings > Build), grouped by which
+// locale(s) each font is meant for — mirrors NAME_FONT_CLASS_BY_LOCALE in
+// BuildDetailCard.jsx: DotGothic16/Liu Jian Mao Cao/Pattaya were each chosen
+// to cover a SPECIFIC script (JP/CN+TW/TH respectively) with no meaningful
+// Latin coverage, so they have no business appearing as options under a
+// different locale — same reasoning as not showing a CN/TW font when the
+// site's language is set to English. Gasoek One is the odd one out: it's
+// KR's substitute in NAME_FONT_CLASS_BY_LOCALE, but it's a genuinely
+// bilingual Hangul+Latin font, so it's also listed below as a normal Latin
+// option — same treatment Press Start 2P already gets for ru (also listed in
+// both places).
+// LATIN_FONT_OPTIONS covers every locale NOT in FONT_OPTIONS_BY_LOCALE
+// (en/de/es/fr/id/pt/vi) — Holiday is first/default.
+export const LATIN_FONT_OPTIONS = [
+  { label: 'Holiday', value: 'holiday-font' },
+  { label: 'League Gothic', value: 'league-gothic-font' },
+  { label: 'Badeen Display', value: 'badeen-display-font' },
+  { label: 'Bitcount Grid Double', value: 'bitcount-grid-double-font' },
+  { label: 'Libre Baskerville', value: 'libre-baskerville-bold' },
+  { label: 'Afacad', value: 'afacad-bold' },
+  { label: 'Gasoek One', value: 'gasoek-one-font' },
+  { label: 'Press Start 2P', value: 'press-start-2p-font' },
+];
+// Each entry here is the exact single font NAME_FONT_CLASS_BY_LOCALE already
+// uses for that locale — one option each for now (no other font covers that
+// script yet), and it's also the default, so this matches the name panel
+// exactly until more per-script fonts are added.
+export const FONT_OPTIONS_BY_LOCALE = {
+  jp: [{ label: 'DotGothic16', value: 'dotgothic16-font' }],
+  kr: [{ label: 'Gasoek One', value: 'gasoek-one-font' }],
+  cn: [{ label: 'Liu Jian Mao Cao', value: 'liu-jian-mao-cao-font' }],
+  tw: [{ label: 'Liu Jian Mao Cao', value: 'liu-jian-mao-cao-font' }],
+  th: [{ label: 'Pattaya', value: 'pattaya-font' }],
+  ru: [{ label: 'Press Start 2P', value: 'press-start-2p-font' }],
+};
+
+export function weaponNameFontOptionsForLocale(locale) {
+  return FONT_OPTIONS_BY_LOCALE[locale] ?? LATIN_FONT_OPTIONS;
+}

@@ -5,6 +5,7 @@ import authReducer from './authSlice';
 import localisationReducer from './localisationSlice';
 import settingsReducer from './settingsSlice';
 import bindingsReducer from './bindingsSlice';
+import translationWarningReducer from './translationWarningSlice';
 
 const SETTINGS_STORAGE_KEY = 're:muria:settings';
 
@@ -16,6 +17,7 @@ const store = configureStore({
     localisation: localisationReducer,
     settings: settingsReducer,
     bindings: bindingsReducer,
+    translationWarning: translationWarningReducer,
   }
 });
 

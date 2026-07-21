@@ -6,6 +6,7 @@ import { useSelector } from 'react-redux'
 import { selectBackgroundImageKey, selectBgBlur } from '../../store/settingsSlice'
 import { backgroundImages } from '../../assets/backgroundImages'
 import ThemeManager from '../ThemeManager'
+import TranslationWarningBanner from '../TranslationWarningBanner'
 
 const BG_BLUR_VALUES = {
   none: '0px',
@@ -31,6 +32,7 @@ function RootLayout() {
 
       <div className="relative z-10 flex flex-col h-screen">
         <Header />
+        <TranslationWarningBanner />
 
         <div className="flex-1 min-h-0 flex overflow-hidden">
           <Outlet />

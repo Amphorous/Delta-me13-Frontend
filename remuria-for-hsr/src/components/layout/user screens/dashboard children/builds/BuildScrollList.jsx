@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
+import { LuUsersRound } from 'react-icons/lu';
 import BuildScrollItem from './BuildScrollItem';
 import useBuildScrollSync from './useBuildScrollSync';
 
@@ -48,9 +49,26 @@ function BuildScrollList({ builds, onFocusChange, onCharacterFilterClick, skinSe
   }, [focusedIndex, builds, onFocusChange]);
 
   if (count === 0) {
+    // Ghost/ghost twin of a real BuildScrollItem row — same card shell
+    // (rounded-md, dashed inset frame, left icon slot, divider) at the same
+    // ITEM_HEIGHT, but static (no arc/scale motion, no tooltips, no per-build
+    // data) with a generic silhouette in place of a character portrait and
+    // a "no builds ;(" message where the name/details column normally sits.
     return (
-      <div className="w-full h-full flex items-center justify-center text-center px-2">
-        No builds found.
+      <div className="w-full h-full flex items-center justify-center px-2">
+        <div
+          className="relative w-full flex items-center bg-gray-950/75 backdrop-blur-md overflow-hidden rounded-md"
+          style={{ height: ITEM_HEIGHT }}
+        >
+          <div className="absolute inset-1 border-2 border-dashed border-white/10 rounded-md pointer-events-none" />
+          <div className="relative shrink-0 h-full aspect-square flex items-center justify-center">
+            <LuUsersRound size={26} className="text-white/15" />
+          </div>
+          <div className="self-stretch my-2 w-px bg-white/10 shrink-0" />
+          <div className="flex-1 flex items-center justify-center h-full min-w-0 px-2">
+            <span className="afacad-bold text-white/25 text-sm select-none truncate">No builds ;(</span>
+          </div>
+        </div>
       </div>
     );
   }
