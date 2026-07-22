@@ -15,6 +15,7 @@ import { selectLoc } from '../../../../store/localisationSlice';
 import { selectRelicAnimations, selectRelicShowCV } from '../../../../store/settingsSlice';
 import axios from 'axios';
 import { statIconGetter, parseTid, relicPieceIconUrl, characterIconUrl, handleCharacterIconError } from './relicConstants';
+import { rarityBorderColor, rarityBgColor, rarityTextColor } from '../../../../utils/rarityColors';
 
 function statNameGetter(statType) {
     if (!statType) return '';
@@ -166,34 +167,19 @@ function RelicItem({info, relicIndex, onStatClick, sortBy, onFilterClick, active
 
     function rarityColourGetter(){
         if(relicMetaInfo){
-            switch(relicMetaInfo[0]){
-                case "6": return `border-amber-400/40 `;
-                case "5": return "border-purple-400/40";
-                case "4": return "border-blue-400/40";
-                case "3": return "border-gray-400/40";
-            }
+            return rarityBorderColor(relicMetaInfo[0]);
         }
     }
 
     function rarityBGColourGetter(){
         if(relicMetaInfo){
-            switch(relicMetaInfo[0]){
-                case "6": return `bg-amber-400/40 `;
-                case "5": return "bg-purple-400/40";
-                case "4": return "bg-blue-400/40";
-                case "3": return "bg-gray-400/40";
-            }
+            return rarityBgColor(relicMetaInfo[0]);
         }
     }
 
     function rarityTextColourGetter(){
         if(relicMetaInfo){
-            switch(relicMetaInfo[0]){
-                case "6": return `text-amber-200/80 `;
-                case "5": return "text-purple-200/80";
-                case "4": return "text-blue-200/80";
-                case "3": return "text-gray-200/80";
-            } 
+            return rarityTextColor(relicMetaInfo[0]);
         }
     }
 

@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { Suspense, lazy } from 'react'
 import './index.css'
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router'
 import RootLayout from './components/layout/RootLayout'
@@ -15,6 +16,15 @@ import NotFound from './components/layout/NotFound'
 import Leaderboards from './components/layout/Leaderboards'
 import DashboardHome from './components/layout/user screens/dashboard children/DashboardHome'
 import ErrorPage from './components/layout/ErrorPage'
+import IsolatedRouteFallback from './components/layout/IsolatedRouteFallback'
+import AppErrorBoundary from './components/AppErrorBoundary'
+
+// Lazy + its own errorElement below: same ad-block-target reasoning as
+// CookieNotice (see RootLayout.jsx). A per-route errorElement only replaces
+// what this route would have rendered in place of RootLayout's <Outlet />,
+// so a failure here can never take out Header/Footer/the rest of the app —
+// unlike the root "/" route's own errorElement (ErrorPage), which would.
+const PrivacyPolicy = lazy(() => import('./components/layout/PrivacyPolicy'))
 
 const browserRouterObject = createBrowserRouter([
   {
@@ -47,6 +57,20 @@ const browserRouterObject = createBrowserRouter([
         path: "leaderboards",
         element: <Leaderboards />,
         handle: { crumb: () => 'Leaderboards' }
+      },
+      {
+        // Not "/privacy" — ad-block filter lists (EasyPrivacy etc.) broadly
+        // block URL paths containing "privacy" since third-party consent
+        // management trackers commonly host scripts at such paths. Same
+        // page/content, just a route name that doesn't collide with that.
+        path: "legal-notice",
+        element: (
+          <Suspense fallback={null}>
+            <PrivacyPolicy />
+          </Suspense>
+        ),
+        errorElement: <IsolatedRouteFallback />,
+        handle: { crumb: () => 'Privacy Policy' }
       },
       {
         path: "dashboard/:uid",
@@ -88,9 +112,11 @@ const browserRouterObject = createBrowserRouter([
 ])
 
 createRoot(document.getElementById('root')).render(
-  
-  <Provider store={store}>
-    <RouterProvider router = {browserRouterObject} />
-  </Provider>
+
+  <AppErrorBoundary>
+    <Provider store={store}>
+      <RouterProvider router = {browserRouterObject} />
+    </Provider>
+  </AppErrorBoundary>
   ,
 )

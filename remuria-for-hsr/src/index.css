@@ -8,6 +8,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Gasoek+One&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Liu+Jian+Mao+Cao&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Pattaya&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Badeen+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&display=swap');
 @import "tailwindcss";
 @plugin 'tailwind-scrollbar';
 
@@ -155,10 +158,38 @@
     font-style: normal;
   }
 
+  .press-start-2p-font {
+    font-family: "Press Start 2P", monospace;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  /* Badeen Display only ships one real weight — 700 here relies on the
+     browser's default synthetic-bold fallback to still read as bold. */
+  .badeen-display-font {
+    font-family: "Badeen Display", sans-serif;
+    font-weight: 100;
+    font-style: normal;
+  }
+
+  .bitcount-grid-double-font {
+    font-family: "Bitcount Grid Double", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
   .vertical-text {
     writing-mode: vertical-lr;
   }
-  
+
+  /* Right-anchored counterpart to vertical-text: block progression runs
+     right-to-left, so a run's first column sits flush against the right edge
+     and any wrapped overflow columns stack leftward from there — used where
+     text needs to visibly start from a top-right corner instead of centring. */
+  .vertical-text-rl {
+    writing-mode: vertical-rl;
+  }
+
   .vertical-lmao{
     writing-mode: vertical-lr;
     rotate: 180deg;

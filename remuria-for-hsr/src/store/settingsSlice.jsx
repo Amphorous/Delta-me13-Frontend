@@ -16,20 +16,26 @@ function loadFromStorage() {
 
 const defaults = {
     relicAnimations: false,
-    backgroundImageKey: 'backgrounds/unknowable_herta',
-    cardBackgroundImageKey: 'card_backgrounds/albedo',
-    persistSettings: false,
-    themeKey: 'purple',
+    backgroundImageKey: 'backgrounds/miku',
+    cardBackgroundImageKey: 'card_backgrounds/chiori',
+    persistSettings: true,
+    themeKey: 'adaptive',
     pillColorMode: 'card',
     settingsWidth: 'md',
-    relicTwoColumn: false,
-    relicShowCV: false,
+    relicTwoColumn: true,
+    relicShowCV: true,
     relicCVShimmer: true,
     bgBlur: 'medium',
     rankIconShimmer: false,
     jpKanjiMode: true,
     hideBuildIdentity: false,
     buildCardStarfield: false,
+    nameOverflowScrollMode: false,
+    // Non-Latin locales keep falling back to their own dedicated font, since
+    // these values aren't valid options for them (see weaponNameFontOptionsForLocale).
+    weaponNameFontClass: 'holiday-font',
+    buildStatFontClass: 'libre-baskerville-bold',
+    buildStatValueFontClass: 'afacad-bold',
 };
 
 const saved = loadFromStorage();
@@ -61,10 +67,19 @@ const settingsSlice = createSlice({
         setBgBlur: (state, action) => {
             state.bgBlur = action.payload;
         },
+        setWeaponNameFontClass: (state, action) => {
+            state.weaponNameFontClass = action.payload;
+        },
+        setBuildStatFontClass: (state, action) => {
+            state.buildStatFontClass = action.payload;
+        },
+        setBuildStatValueFontClass: (state, action) => {
+            state.buildStatValueFontClass = action.payload;
+        },
     },
 });
 
-export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur } = settingsSlice.actions;
+export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, setWeaponNameFontClass, setBuildStatFontClass, setBuildStatValueFontClass } = settingsSlice.actions;
 export const selectSettings = (state) => state.settings;
 export const selectRelicAnimations = (state) => state.settings.relicAnimations;
 export const selectBackgroundImageKey = (state) => state.settings.backgroundImageKey;
@@ -80,4 +95,11 @@ export const selectRankIconShimmer = (state) => state.settings.rankIconShimmer;
 export const selectJpKanjiMode = (state) => state.settings.jpKanjiMode;
 export const selectHideBuildIdentity = (state) => state.settings.hideBuildIdentity;
 export const selectBuildCardStarfield = (state) => state.settings.buildCardStarfield;
+// false (default) = shrink the build-card name to fit (wrapping to a second
+// vertical column if shrinking alone isn't enough); true = keep it at full
+// size and let the name row scroll instead.
+export const selectNameOverflowScrollMode = (state) => state.settings.nameOverflowScrollMode;
+export const selectWeaponNameFontClass = (state) => state.settings.weaponNameFontClass;
+export const selectBuildStatFontClass = (state) => state.settings.buildStatFontClass;
+export const selectBuildStatValueFontClass = (state) => state.settings.buildStatValueFontClass;
 export default settingsSlice.reducer;

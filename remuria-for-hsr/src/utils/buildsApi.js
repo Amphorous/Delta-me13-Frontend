@@ -3,9 +3,11 @@ import { fetchCsrfToken } from "./csrf";
 
 const BASE = `${import.meta.env.VITE_CELESTIA_API_URL}/build`;
 
-export async function getBuilds(uid, page, { filterByAvatarId, order } = {}) {
+export async function getBuilds(uid, page, { filterByAvatarId, filterByPath, filterByElement, order } = {}) {
   const params = {};
   if (filterByAvatarId) params.filterByAvatarId = filterByAvatarId;
+  if (filterByPath) params.filterByPath = filterByPath;
+  if (filterByElement) params.filterByElement = filterByElement;
   if (order) params.order = order;
   const res = await axios.get(`${BASE}/get-list/${uid}/${page}`, { params });
   return res.data;

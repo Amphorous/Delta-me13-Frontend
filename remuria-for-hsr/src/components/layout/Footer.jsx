@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MdOutlineKeyboardArrowDown } from "react-icons/md";
+import { Link } from 'react-router-dom';
 
 function Footer() {
 
@@ -21,8 +22,10 @@ function Footer() {
         <div className='top-0 w-full flex items-center justify-between px-4 py-1'>
 
           {/* left — brand text */}
-          <p className='afacad-light text-[var(--accent-dim)] text-xs select-none'>
-            Re<span className='text-[var(--accent-colon)]'>:</span>muria - Honkai: Star Rail
+          <p className='afacad-light text-[var(--accent-dim)] text-xs select-none flex items-center gap-2'>
+            <span>Re<span className='text-[var(--accent-colon)]'>:</span>muria - Honkai: Star Rail</span>
+            <span className='opacity-50'>•</span>
+            <Link to='/legal-notice' className='hover:text-white transition cursor-pointer'>Privacy Policy</Link>
           </p>
 
           {/* centre — expand toggle */}
