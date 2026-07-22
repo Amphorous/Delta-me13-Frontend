@@ -2,12 +2,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { motion, useMotionValue, useSpring, useTransform, animate } from 'framer-motion';
 import { CgSpinner } from 'react-icons/cg';
+import { FaRegFaceAngry } from 'react-icons/fa6';
 import tinycolor from 'tinycolor2';
-import { characterIconUrl, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl, weaponNameFontOptionsForLocale, FONT_OPTIONS_BY_LOCALE } from './buildConstants';
+import { characterIconUrl, enkaUiUrl, getSkinList, pathIconUrl, elementIconUrl, weaponNameFontOptionsForLocale, FONT_OPTIONS_BY_LOCALE, defaultBuildStatFontClass, defaultBuildStatValueFontClass, fetchStatNames, deriveDisplayStats, statIconGetter } from './buildConstants';
 import useCutinGradient from './useCutinGradient';
 import { useTranslatedHash } from '../../../../../utils/hashTranslation';
 import { rarityTextColor } from '../../../../../utils/rarityColors';
-import { selectRankIconShimmer, selectHideBuildIdentity, selectBuildCardStarfield, selectNameOverflowScrollMode, selectWeaponNameFontClass } from '../../../../../store/settingsSlice';
+import { selectRankIconShimmer, selectHideBuildIdentity, selectBuildCardStarfield, selectNameOverflowScrollMode, selectWeaponNameFontClass, selectBuildStatFontClass, selectBuildStatValueFontClass } from '../../../../../store/settingsSlice';
 import { selectLoc } from '../../../../../store/localisationSlice';
 import selectBuildPlaceholder from '../../../../../assets/Select a build bozo.png';
 
@@ -55,6 +56,10 @@ const CUTIN_STRIP_WIDTH_CLASS = 'w-[25%]'; // must sum to 100% with INFO_PANEL_W
 // measured relative to the card, not assumed.
 const CORNER_NOTCH_RADIUS = 10; // px
 
+// Font size/family for the STATS/SKILLS/ORNAMENTS watermarks.
+const WATERMARK_FONT_SIZE = 90;
+const WATERMARK_FONT_FAMILY = '"Badeen Display", sans-serif';
+
 function radialNotch(shape, position) {
   return `radial-gradient(${shape} at ${position}, transparent 99%, #000 100%)`;
 }
@@ -95,22 +100,12 @@ const LOCAL_CORNER_MASK_STYLE = buildNotchMaskStyle([
   radialNotch(`circle ${CORNER_NOTCH_RADIUS}px`, '100% 100%'),
 ]);
 
-// Small bites at the 4 cardinal points of each rank-eidolon socket ring,
-// giving its dashed border the same "interrupted, flowing around a cutout"
-// look as the rest of the card instead of a plain unbroken circle. The ring
-// itself is a fixed w-11/h-11 (44px) box now — it used to size itself purely
-// from padding with no explicit width/height, which left it vulnerable to
-// the flex column's default align-items:stretch distorting it into an
-// ellipse instead of a circle; an explicit square size sidesteps that.
-const RANK_SOCKET_NOTCH_RADIUS = 7; // px
-const RANK_SOCKET_NOTCH_MASK_STYLE = buildNotchMaskStyle([
-  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '50% 0%'),
-  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '50% 100%'),
-  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '0% 50%'),
-  radialNotch(`circle ${RANK_SOCKET_NOTCH_RADIUS}px`, '100% 50%'),
-]);
-const RANK_ICON_SIZE = 32; // px — sized to sit inside the 44px ring (minus its border-2) with a small margin
-const RANK_CUTOUT_RADIUS = 20; // px — the actual hole punched through cutouts-being-made's blur, tracked to each ring's measured centre
+// Rank ring border bites, sized as ratios of the ring's own measured width.
+const RANK_ICON_TO_RING_RATIO = (32 / 44) * 0.9;
+// Radius ratio; 0.5 reaches the ring's own edge, 0.47 sits just inside it.
+const RANK_CUTOUT_TO_RING_RATIO = 0.47;
+// Ring's own small border bite, independent of the cutout ratio above.
+const RANK_SOCKET_NOTCH_TO_RING_RATIO = (7 / 44) * 0.8;
 
 // Corner bite for the weapon-art "stacked glass card" frame — same notch idiom
 // as the other masks above, just a smaller radius to suit the weapon image's
@@ -326,6 +321,29 @@ function useVerticalNameFit(containerRef, measureRef, text, enabled, {
   return fit;
 }
 
+// Measures a watermark word in Canvas and returns an SVG transform that
+// lands its tight ink bounds flush at y:[0,100] of a 500x100 viewBox.
+function useWatermarkTextTransform(text, fontSize, fontFamily, dep) {
+  const [transform, setTransform] = useState('');
+  useLayoutEffect(() => {
+    const measure = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = `100 ${fontSize}px ${fontFamily}`;
+      const m = ctx.measureText(text);
+      const tightHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+      if (!tightHeight) return;
+      const scaleY = 100 / tightHeight;
+      const translateY = scaleY * m.actualBoundingBoxAscent;
+      setTransform(`translate(0, ${translateY}) scale(1, ${scaleY})`);
+    };
+    measure();
+    // Re-measure once the webfont finishes loading in case it swapped in late.
+    document.fonts?.ready?.then(measure);
+  }, [dep, text, fontSize, fontFamily]);
+  return transform;
+}
+
 // Post-extraction tone adjustments for characters whose extracted HUE is right
 // but the tone is off — full overrides above are for when the hue itself is
 // wrong. Applied per stop to the sampled gradient.
@@ -333,6 +351,14 @@ const GRADIENT_ADJUST_BY_AVATAR = {
   1412: { saturate: 16, darken: 18 }, // deeper and darker (bumped twice now)
   1506: { saturate: 6, darken: 22 },  // considerably darken, then deepened further
 };
+
+// Fixed STATS/ORNAMENTS watermark colour override per avatar. Skills is untouched.
+const WATERMARK_GOLD_BY_AVATAR = {
+  1510: '#B8860B',
+};
+
+// Avatars whose stat row bars are darker and more opaque than normal, even more so on hover.
+const DARK_STAT_ROW_AVATARS = new Set(['1510', '1415']);
 
 // League Gothic/Holiday are Latin display faces with no glyphs for these
 // scripts, so locales that need them get a single substitute layer instead
@@ -352,6 +378,23 @@ const NAME_FONT_CLASS_BY_LOCALE = {
   ru: 'press-start-2p-font',
 };
 
+// Stat row glass box accent colour, keyed by stat type substring.
+function statRowAccentColor(type) {
+  const t = type.toLowerCase();
+  if (t.includes('attack')) return '#ef4444';
+  if (t.includes('defence')) return '#3b82f6';
+  if (t.includes('hp') || t.includes('heal')) return '#22c55e';
+  if (t.includes('thunder')) return '#ce69e6';
+  if (t.includes('wind')) return '#79d09c';
+  if (t.includes('quantum')) return '#6862c8';
+  if (t.includes('physical')) return '#666667';
+  if (t.includes('imaginary')) return '#f7e548';
+  if (t.includes('ice')) return '#43a6df';
+  if (t.includes('fire')) return '#ed3d38';
+  if (t.includes('elation')) return '#eab308';
+  return null;
+}
+
 function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFilterClick }) {
   const rankIconShimmerEnabled = useSelector(selectRankIconShimmer);
   const hideBuildIdentity = useSelector(selectHideBuildIdentity);
@@ -368,14 +411,56 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
   const weaponNameFontClass = weaponNameFontOptions.some(o => o.value === weaponNameFontSetting)
     ? weaponNameFontSetting
     : weaponNameFontOptions[0].value;
-  // Card-back name font is a separate, fixed rule — NOT the Settings-driven
-  // weaponNameFontClass above: Afacad Bold for Latin locales, or that
-  // locale's own dedicated script font (same one NAME_FONT_CLASS_BY_LOCALE
-  // uses) for jp/kr/cn/tw/th/ru, always the locale default regardless of
-  // what the user picked for the front label.
+  // Build Stats Font setting, drives stat labels and the card-back lightcone name.
+  const buildStatFontSetting = useSelector(selectBuildStatFontClass);
+  const buildStatFontOptions = weaponNameFontOptionsForLocale(locale);
+  const statLabelFontClass = buildStatFontOptions.some(o => o.value === buildStatFontSetting)
+    ? buildStatFontSetting
+    : defaultBuildStatFontClass(locale);
+  // Card-back lightcone name font is its own fixed rule, independent of the stat font setting.
   const weaponBackNameFontClass = FONT_OPTIONS_BY_LOCALE[locale]
     ? weaponNameFontOptionsForLocale(locale)[0].value
     : 'afacad-bold';
+  const statLabelWrapClass = 'whitespace-normal break-words leading-tight';
+  // jp/kr/cn fonts and Afacad Bold read smaller than other Latin options at the same size.
+  const statLabelFontSizeClass = statLabelFontClass === 'afacad-bold'
+    ? 'text-[4.8cqh]'
+    : statLabelFontClass === 'press-start-2p-font'
+      ? 'text-[3.2cqh]'
+      : ['jp', 'kr', 'cn'].includes(locale)
+        ? 'text-[4.4cqh]'
+        : 'text-[4cqh]';
+  // Press Start 2P reads fine with a bigger shadow offset, other fonts need a smaller one.
+  const statLabelShadowOffset = statLabelFontClass === 'press-start-2p-font' ? '0.06em' : '0.04em';
+
+  // Build Stat Values Font setting, independent from the label font above.
+  const buildStatValueFontSetting = useSelector(selectBuildStatValueFontClass);
+  const statValueFontClass = buildStatFontOptions.some(o => o.value === buildStatValueFontSetting)
+    ? buildStatValueFontSetting
+    : defaultBuildStatValueFontClass(locale);
+  const statValueShadowOffset = statValueFontClass === 'press-start-2p-font' ? '0.06em' : '0.04em';
+
+  // Character stat panel — statNames is the /hsr/stat-names/{locale} map
+  // (module-scope cached per locale by fetchStatNames itself, so this just
+  // re-reads the shared cache whenever locale changes rather than re-fetching).
+  // deriveDisplayStats falls back to the offline English STAT_ALIASES labels
+  // via statLabel whenever statNames is still null (first load) or missing a
+  // key, so there's no unlocalised/blank flash — just a brief English one.
+  const [statNames, setStatNames] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchStatNames(locale).then(names => { if (!cancelled) setStatNames(names); });
+    return () => { cancelled = true; };
+  }, [locale]);
+  const displayStats = useMemo(
+    () => deriveDisplayStats(build?.fightProps?.stats, statNames),
+    [build?.fightProps?.stats, statNames]
+  );
+
+  const statsTextTransform = useWatermarkTextTransform('STATS', WATERMARK_FONT_SIZE, WATERMARK_FONT_FAMILY, build?.id);
+  const skillsTextTransform = useWatermarkTextTransform('SKILLS', WATERMARK_FONT_SIZE, WATERMARK_FONT_FAMILY, build?.id);
+  const ornamentsTextTransform = useWatermarkTextTransform('ORNAMENTS', WATERMARK_FONT_SIZE, WATERMARK_FONT_FAMILY, build?.id);
+
   // The dashboard-page account being viewed, not this build's own data —
   // same store slice + access pattern UserCard/UserLongCard/Dashboard use.
   const focusedUser = useSelector(state => state.focusedUser);
@@ -391,6 +476,8 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
   // socket divs.
   const rankSocketRefs = useRef([]);
   const [rankIconRects, setRankIconRects] = useState([]);
+  // Ring's own border-bite mask, computed from the same measured ring width as the cutout hole.
+  const [rankSocketNotchMaskStyle, setRankSocketNotchMaskStyle] = useState({});
   // cutouts-being-made's own mask: the 4 static corner notches plus a hole
   // tracked to each ring's measured centre (see the rankSocketRefs
   // useLayoutEffect further down). Defaults to just the corners so they
@@ -555,6 +642,11 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
     : extractedStops;
   const gradientStops = overrideStops ?? adjustedStops ?? FALLBACK_GRADIENT_STOPS;
   const gradientCss = `linear-gradient(to right, ${gradientStops.join(', ')})`;
+  // STATS/ORNAMENTS base colour, normally the darkest extracted stop, overridden per avatar for some characters.
+  const statsBaseColor = WATERMARK_GOLD_BY_AVATAR[build?.avatarId] ?? gradientStops[gradientStops.length - 1];
+  const statsGlintColor = tinycolor(statsBaseColor).darken(5).toHexString();
+  // SKILLS uses the light end of the gradient instead, since it sits at the dark end of the card.
+  const skillsGlintColor = tinycolor(gradientStops[0]).lighten(6).toHexString();
   // "Card accent colour" for the Holiday name layer — the brightest/most vivid
   // stop of this build's own extracted (or overridden) gradient, so the accent
   // always matches this specific character rather than the app-wide theme accent.
@@ -673,12 +765,25 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
       setRankIconRects(ringRects.map((rect) => rect && {
         leftPct: ((rect.left + rect.width / 2 - cardRect.left) / cardRect.width) * 100,
         topPct: ((rect.top + rect.height / 2 - cardRect.top) / cardRect.height) * 100,
+        iconSize: rect.width * RANK_ICON_TO_RING_RATIO,
       }));
+
+      // All rings are the same size, so the first measured one stands in for all.
+      const firstRingWidth = ringRects.find(Boolean)?.width;
+      if (firstRingWidth) {
+        const socketNotchRadius = firstRingWidth * RANK_SOCKET_NOTCH_TO_RING_RATIO;
+        setRankSocketNotchMaskStyle(buildNotchMaskStyle([
+          radialNotch(`circle ${socketNotchRadius}px`, '50% 0%'),
+          radialNotch(`circle ${socketNotchRadius}px`, '50% 100%'),
+          radialNotch(`circle ${socketNotchRadius}px`, '0% 50%'),
+          radialNotch(`circle ${socketNotchRadius}px`, '100% 50%'),
+        ]));
+      }
 
       const ringNotches = ringRects.filter(Boolean).map((rect) => {
         const leftPct = ((rect.left + rect.width / 2 - cutoutsRect.left) / cutoutsRect.width) * 100;
         const topPct = ((rect.top + rect.height / 2 - cutoutsRect.top) / cutoutsRect.height) * 100;
-        return radialNotch(`circle ${RANK_CUTOUT_RADIUS}px`, `${leftPct}% ${topPct}%`);
+        return radialNotch(`circle ${rect.width * RANK_CUTOUT_TO_RING_RATIO}px`, `${leftPct}% ${topPct}%`);
       });
 
       setLocalMaskStyle(buildNotchMaskStyle([
@@ -880,25 +985,26 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
                   <div
                     key={i}
                     ref={(el) => { rankSocketRefs.current[i] = el; }}
-                    className='w-11 h-11 shrink-0 rounded-full border-2 border-white/40 border-dashed'
-                    style={RANK_SOCKET_NOTCH_MASK_STYLE}
+                    // Icon size and cutout hole are both a fraction of this ring's own measured width.
+                    className='w-[6.2cqh] h-[6.2cqh] shrink-0 rounded-full border-2 border-white/40 border-dashed'
+                    style={rankSocketNotchMaskStyle}
                   />
                 ))}
               </div>
 
               <div className=' flex flex-col h-full w-full'>
-                <div className='flex w-full h-[55%]'>
-                  <div
-                    className='relative w-[30%] bg-gray-400 flex items-center justify-center'
+                <div className='flex w-full h-[50%]'>
+                  <div className='relative w-[29%] lightcone-box flex items-center justify-center'
                     style={{ perspective: WEAPON_TILT_PERSPECTIVE_PX }}
                     onMouseMove={handleWeaponPointerMove}
                     onMouseLeave={handleWeaponPointerLeave}
                   >
                     <motion.div
                       className='relative cursor-pointer'
-                      style={{ rotateX: weaponRotateX, rotateY: weaponRotateY, transformStyle: 'preserve-3d' }}
+                      style={{ rotateX: weaponRotateX, rotateY: weaponRotateY, scale: 0.93, transformStyle: 'preserve-3d' }}
                       onClick={handleWeaponFlipClick}
                     >
+                      {/* scale shrinks the whole lightcone: image, both glass panes, and the flip side. */}
                       {/* back glass pane — offset down-right pre-flip (top-right post-flip),
                           sits behind the art, and slides further along that diagonal as tilt grows */}
                       <motion.div
@@ -1028,7 +1134,7 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
                           sits in front of the art, and slides further along that diagonal as tilt grows */}
                       <motion.div
                         className='absolute inset-0 z-20 bg-gray-800/40
-                         backdrop-blur-md border border-[#B2B2B2]/40 pointer-events-none flex items-center justify-center'
+                          border border-[#B2B2B2]/40 pointer-events-none flex items-center justify-center'
                         style={{ x: weaponFrontOffset, y: weaponFrontOffset, opacity: paneOpacity, ...WEAPON_CARD_NOTCH_MASK_STYLE }}
                       >
                         <div className='relative h-[95%] w-[95%] flex items-center justify-center'>
@@ -1090,7 +1196,8 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
                               glass shell (bg + backdrop-blur + thin accent border) the
                               rest of the app's chips use, not a flat block. */}
                           {build?.equipsWeapon?.weaponLevel != null && (
-                            <div className='absolute top-1 left-1 flex items-baseline gap-[0.3cqw] bg-gray-900/75 backdrop-blur-md border border-[var(--accent-border-60)] rounded-full px-[0.9cqw] py-[0.5cqw] pointer-events-none select-none'>
+                            <div className='absolute top-1 left-1 flex items-baseline gap-[0.3cqw] bg-gray-900/75 backdrop-blur-md border
+                             border-[var(--accent-border-60)] rounded-md px-[0.6cqw] py-[0.2cqw] pointer-events-none select-none'>
                               <span className='afacad-light text-[var(--accent-muted)] text-[1.6cqw] leading-none'>Lv</span>
                               <span className='league-gothic-bold text-white text-[2.1cqw] leading-none'>{build.equipsWeapon.weaponLevel}</span>
                             </div>
@@ -1116,14 +1223,169 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
                       </motion.div>
                     </motion.div>
                   </div>
-                  <div className='relative w-[37.5%] bg-gray-500'>
-                    
+                  <div className='relative w-[35%] stats-box flex flex-col p-[1.8cqh]  overflow-y-auto [container-type:size]'>
+                    <div className='relative stat-container bg-ambder-400 h-full rounded-md overflow-hidden'>
+                      {/* STATS watermark. viewBox maps to the container, textLength fills width, statsTextTransform fills height. */}
+                      <svg
+                        viewBox='0 0 500 100'
+                        preserveAspectRatio='none'
+                        className='absolute inset-0 w-full h-full pointer-events-none select-none'
+                      >
+                        <defs>
+                          <linearGradient id={`stats-watermark-glint-${build?.id ?? 'x'}`} x1='0%' y1='0%' x2='100%' y2='15%'>
+                            <stop offset='0%' stopColor={statsBaseColor} />
+                            <stop offset='35%' stopColor={statsBaseColor} />
+                            <stop offset='48%' stopColor={statsGlintColor} />
+                            <stop offset='52%' stopColor={statsGlintColor} />
+                            <stop offset='65%' stopColor={statsBaseColor} />
+                            <stop offset='100%' stopColor={statsBaseColor} />
+                          </linearGradient>
+                        </defs>
+                        <text
+                          x='0'
+                          y='0'
+                          textAnchor='start'
+                          textLength='500'
+                          lengthAdjust='spacingAndGlyphs'
+                          className='badeen-display-font'
+                          fontSize={WATERMARK_FONT_SIZE}
+                          fill={`url(#stats-watermark-glint-${build?.id ?? 'x'})`}
+                          transform={statsTextTransform}
+                        >
+                          STATS
+                        </text>
+                      </svg>
+
+                      <div className='relative flex flex-col gap-[0.4cqh] h-full p-[5cqw] justify-center'>
+                      {/* Rows are content-sized, centred vertically via justify-center. */}
+                      <div className='grid grid-cols-1'>
+                        {displayStats.flatMap((stat, i) => {
+                          const accent = statRowAccentColor(stat.type);
+                          const isDarkStatRowAvatar = DARK_STAT_ROW_AVATARS.has(String(build?.avatarId));
+                          const rowTintHex = (accent
+                            ? tinycolor(accent).darken(isDarkStatRowAvatar ? 30 : 0)
+                            : tinycolor(isDarkStatRowAvatar ? '#000000' : '#ffffff')
+                          ).toHexString();
+                          const baseAlpha = isDarkStatRowAvatar ? (accent ? 0.3 : 0.25) : (accent ? 0.16 : 0.008);
+                          const hoverAlpha = isDarkStatRowAvatar ? (accent ? 0.65 : 0.55) : (accent ? 0.35 : 0.12);
+                          const rowBg = tinycolor(rowTintHex).setAlpha(baseAlpha).toRgbString();
+                          const rowBgHover = tinycolor(rowTintHex).setAlpha(hoverAlpha).toRgbString();
+                          const rowBorder = accent ? tinycolor(accent).setAlpha(0.4).toRgbString() : 'rgba(255,255,255,0.15)';
+                          const row = (
+                            <div
+                              key={stat.type}
+                              className='group flex items-center gap-[0.8cqw] min-w-0 rounded-md backdrop-blur-sm px-[1cqw] py-[0.25cqh] transition-colors duration-200 bg-[var(--row-bg)] hover:bg-[var(--row-bg-hover)]'
+                              style={{ '--row-bg': rowBg, '--row-bg-hover': rowBgHover, border: `1px solid ${rowBorder}` }}
+                            >
+                              {/* No truncate, long stat names wrap instead of clipping. */}
+                              <span className='flex items-center gap-[1.2cqw] min-w-0'>
+                                {stat.type === 'BaseAggro' ? (
+                                  // Aggro has no relic icon asset, use a react-icon instead.
+                                  <FaRegFaceAngry className='w-[3.2cqh] h-[3.2cqh] text-white/70 shrink-0' />
+                                ) : statIconGetter(stat.type) && (
+                                  <img
+                                    src={statIconGetter(stat.type)}
+                                    alt=''
+                                    className='w-[3.2cqh] h-[3.2cqh] object-contain shrink-0'
+                                  />
+                                )}
+                                <span
+                                  className={`${statLabelFontClass} text-white ${statLabelFontSizeClass} ${statLabelWrapClass} min-w-0`}
+                                  style={{ textShadow: `${statLabelShadowOffset} ${statLabelShadowOffset} 0 ${cardAccentColor}` }}
+                                >
+                                  {stat.label}
+                                </span>
+                              </span>
+                              {/* Hover-only leader line filling the gap between name and value. */}
+                              <span className='flex-1 min-w-[1cqw] mx-[0.6cqw] border-b border-dashed border-transparent group-hover:border-white/40 transition-colors duration-200' />
+                              <span
+                                className={`${statValueFontClass} text-white text-[3.9cqh] tabular-nums shrink-0`}
+                                style={{ textShadow: `${statValueShadowOffset} ${statValueShadowOffset} 0 ${cardAccentColor}` }}
+                              >
+                                {stat.value}
+                              </span>
+                            </div>
+                          );
+                          if (i === 0) return [row];
+                          return [
+                            <div key={`divider-${stat.type}`} className='w-full h-px bg-white/20 my-[0.4cqh]' />,
+                            row,
+                          ];
+                        })}
+                      </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className='relative w-[32.5%] bg-gray-600'>
-                    
+                  <div className='relative w-[35%] skills-box flex flex-col p-[1.8cqh] overflow-y-auto [container-type:size]'>
+                    <div className='relative skills-container bg-ambder-400 h-full rounded-md overflow-hidden'>
+                      {/* SKILLS watermark, uses the light end of the gradient since this box sits at the dark end. */}
+                      <svg
+                        viewBox='0 0 500 100'
+                        preserveAspectRatio='none'
+                        className='absolute inset-0 w-full h-full pointer-events-none select-none'
+                      >
+                        <defs>
+                          <linearGradient id={`skills-watermark-glint-${build?.id ?? 'x'}`} x1='0%' y1='0%' x2='100%' y2='15%'>
+                            <stop offset='0%' stopColor={gradientStops[0]} />
+                            <stop offset='35%' stopColor={gradientStops[0]} />
+                            <stop offset='48%' stopColor={skillsGlintColor} />
+                            <stop offset='52%' stopColor={skillsGlintColor} />
+                            <stop offset='65%' stopColor={gradientStops[0]} />
+                            <stop offset='100%' stopColor={gradientStops[0]} />
+                          </linearGradient>
+                        </defs>
+                        <text
+                          x='0'
+                          y='0'
+                          textAnchor='start'
+                          textLength='500'
+                          lengthAdjust='spacingAndGlyphs'
+                          className='badeen-display-font'
+                          fontSize={WATERMARK_FONT_SIZE}
+                          fill={`url(#skills-watermark-glint-${build?.id ?? 'x'})`}
+                          transform={skillsTextTransform}
+                        >
+                          SKILLS
+                        </text>
+                      </svg>
+
+                    </div>
                   </div>
                 </div>
-                <div className='w-full h-[45%] flex build-relic-container bg-gray-700'></div>
+                <div className='w-[99%] h-[50%] flex ornament-box p-[1.8cqh] overflow-y-auto [container-type:size]'>
+                  <div className='relative ornaments-container bg-ambder-400 h-full w-full rounded-md overflow-hidden'>
+                    {/* ORNAMENTS watermark, same technique as STATS. */}
+                    <svg
+                      viewBox='0 0 500 100'
+                      preserveAspectRatio='none'
+                      className='absolute inset-0 w-full h-full pointer-events-none select-none'
+                    >
+                      <defs>
+                        <linearGradient id={`ornaments-watermark-glint-${build?.id ?? 'x'}`} x1='0%' y1='0%' x2='100%' y2='15%'>
+                          <stop offset='0%' stopColor={statsBaseColor} />
+                          <stop offset='35%' stopColor={statsBaseColor} />
+                          <stop offset='48%' stopColor={statsGlintColor} />
+                          <stop offset='52%' stopColor={statsGlintColor} />
+                          <stop offset='65%' stopColor={statsBaseColor} />
+                          <stop offset='100%' stopColor={statsBaseColor} />
+                        </linearGradient>
+                      </defs>
+                      <text
+                        x='0'
+                        y='0'
+                        textAnchor='start'
+                        textLength='500'
+                        lengthAdjust='spacingAndGlyphs'
+                        className='badeen-display-font'
+                        fontSize={WATERMARK_FONT_SIZE}
+                        fill={`url(#ornaments-watermark-glint-${build?.id ?? 'x'})`}
+                        transform={ornamentsTextTransform}
+                      >
+                        ORNAMENTS
+                      </text>
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               {!hideBuildIdentity && (
@@ -1343,8 +1605,8 @@ function BuildDetailCard({ build, skinIndex = 0, onPathFilterClick, onElementFil
               style={{
                 left: `${rect.leftPct}%`,
                 top: `${rect.topPct}%`,
-                width: RANK_ICON_SIZE,
-                height: RANK_ICON_SIZE,
+                width: rect.iconSize,
+                height: rect.iconSize,
                 transform: 'translate(-50%, -50%)',
               }}
             >

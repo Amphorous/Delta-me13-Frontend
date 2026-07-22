@@ -4,10 +4,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDown, IoIosArrowBack, IoIosSearch, IoIosClose } from 'react-icons/io';
-import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, setWeaponNameFontClass, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth, selectBgBlur, selectWeaponNameFontClass } from '../../store/settingsSlice';
+import { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, setWeaponNameFontClass, setBuildStatFontClass, setBuildStatValueFontClass, selectSettings, selectThemeKey, selectPillColorMode, selectSettingsWidth, selectBgBlur, selectWeaponNameFontClass, selectBuildStatFontClass, selectBuildStatValueFontClass } from '../../store/settingsSlice';
 import { backgroundImages, cardBackgroundImages } from '../../assets/backgroundImages';
 import { selectLoc, setLoc } from '../../store/localisationSlice';
-import { weaponNameFontOptionsForLocale } from './user screens/dashboard children/builds/buildConstants';
+import { weaponNameFontOptionsForLocale, defaultBuildStatFontClass, defaultBuildStatValueFontClass } from './user screens/dashboard children/builds/buildConstants';
 
 // Section reads the active search query via context instead of a prop on
 // every <Section> call site — same search string, ~8 call sites, a prop
@@ -530,6 +530,88 @@ function WeaponNameFontSelector() {
     );
 }
 
+// Drives the stat panel labels and the card-back lightcone name, defaults to Press Start 2P for Latin.
+function BuildStatFontSelector() {
+    const dispatch = useDispatch();
+    const selectedLoc = useSelector(selectLoc);
+    const buildStatFontClass = useSelector(selectBuildStatFontClass);
+    const options = weaponNameFontOptionsForLocale(selectedLoc);
+    const activeValue = options.some(o => o.value === buildStatFontClass)
+        ? buildStatFontClass
+        : defaultBuildStatFontClass(selectedLoc);
+
+    return (
+        <div className='flex flex-col gap-2 px-4 py-3'>
+            <div>
+                <p className='text-white afacad-semi-bold text-sm'>Build Stats Font</p>
+                <p className='text-white/55 afacad-light text-xs mt-0.5'>Font used for the stat panel labels and the lightcone name on the build detail card's back face.</p>
+            </div>
+            <div className='flex gap-2 flex-wrap'>
+                {options.map(({ label, value }) => {
+                    const active = value === activeValue;
+                    return (
+                        <button
+                            key={value}
+                            onClick={() => dispatch(setBuildStatFontClass(value))}
+                            className={`px-3 py-1.5 rounded-lg afacad-semi-bold text-xs transition-all cursor-pointer select-none
+                                ${active
+                                    ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-60)] text-white'
+                                    : 'hover:bg-white/5 text-white/70 hover:text-white'
+                                }`}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
+            </div>
+            <p className='afacad-light text-white/50 text-xs'>
+                Different fonts are available depending on your selected language (Settings → Localisation) — some are chosen specifically to support that language's script.
+            </p>
+        </div>
+    );
+}
+
+// Independent from BuildStatFontSelector above, labels and values can use different fonts.
+function BuildStatValueFontSelector() {
+    const dispatch = useDispatch();
+    const selectedLoc = useSelector(selectLoc);
+    const buildStatValueFontClass = useSelector(selectBuildStatValueFontClass);
+    const options = weaponNameFontOptionsForLocale(selectedLoc);
+    const activeValue = options.some(o => o.value === buildStatValueFontClass)
+        ? buildStatValueFontClass
+        : defaultBuildStatValueFontClass(selectedLoc);
+
+    return (
+        <div className='flex flex-col gap-2 px-4 py-3'>
+            <div>
+                <p className='text-white afacad-semi-bold text-sm'>Build Stat Values Font</p>
+                <p className='text-white/55 afacad-light text-xs mt-0.5'>Font used for the stat panel's numeric values on the build detail card's back face.</p>
+            </div>
+            <div className='flex gap-2 flex-wrap'>
+                {options.map(({ label, value }) => {
+                    const active = value === activeValue;
+                    return (
+                        <button
+                            key={value}
+                            onClick={() => dispatch(setBuildStatValueFontClass(value))}
+                            className={`px-3 py-1.5 rounded-lg afacad-semi-bold text-xs transition-all cursor-pointer select-none
+                                ${active
+                                    ? 'bg-[var(--accent-bg-40)] ring-1 ring-[var(--accent-border-60)] text-white'
+                                    : 'hover:bg-white/5 text-white/70 hover:text-white'
+                                }`}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
+            </div>
+            <p className='afacad-light text-white/50 text-xs'>
+                Different fonts are available depending on your selected language (Settings → Localisation) — some are chosen specifically to support that language's script.
+            </p>
+        </div>
+    );
+}
+
 const WIDTH_OPTIONS = [
     { key: 'sm', label: 'Small' },
     { key: 'md', label: 'Medium' },
@@ -684,6 +766,8 @@ function Settings() {
                         description="When a character name is too long for the build detail card, scroll it at full size instead of shrinking it (and wrapping to a second column if shrinking alone isn't enough)."
                     />
                     <WeaponNameFontSelector />
+                    <BuildStatFontSelector />
+                    <BuildStatValueFontSelector />
                 </Section>
 
                 <Section title="Background">

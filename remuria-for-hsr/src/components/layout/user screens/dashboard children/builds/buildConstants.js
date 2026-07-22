@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { STAT_ALIASES, characterIconUrl, handleCharacterIconError, relicPieceIconUrl } from '../relicConstants';
+import { STAT_ALIASES, characterIconUrl, handleCharacterIconError, relicPieceIconUrl, statIconGetter } from '../relicConstants';
 
-export { STAT_ALIASES, characterIconUrl, handleCharacterIconError, relicPieceIconUrl };
+export { STAT_ALIASES, characterIconUrl, handleCharacterIconError, relicPieceIconUrl, statIconGetter };
 
 export function statLabel(type) {
   const alias = STAT_ALIASES.find(s => s.type === type);
@@ -58,6 +58,26 @@ const PERCENT_LABEL_TYPES = {
   HealRatio: 'HealRatioBase',
 };
 
+// Fixed display order: HP/ATK/DEF/SPD, then CRIT Rate/CRIT DMG, then everything else, then Elation, then DMG Boost.
+const STAT_ORDER_PRIORITY = {
+  HPDelta: 0,
+  AttackDelta: 1,
+  DefenceDelta: 2,
+  SpeedDelta: 3,
+  CriticalChance: 4,
+  CriticalDamage: 5,
+};
+const DMG_BOOST_TYPES = new Set([
+  'PhysicalAddedRatio', 'FireAddedRatio', 'IceAddedRatio', 'ThunderAddedRatio',
+  'WindAddedRatio', 'QuantumAddedRatio', 'ImaginaryAddedRatio',
+]);
+function statOrderPriority(type) {
+  if (type in STAT_ORDER_PRIORITY) return STAT_ORDER_PRIORITY[type];
+  if (type === 'ElationDamageAddedRatio') return 90;
+  if (DMG_BOOST_TYPES.has(type)) return 100;
+  return 50;
+}
+
 // statNames is the (optional) already-fetched /hsr/stat-names/{locale} map — see
 // fetchStatNames above. Pass null/undefined while it's still loading or failed to
 // load; every row falls back to the local STAT_ALIASES-based label in that case.
@@ -95,6 +115,7 @@ export function deriveDisplayStats(rawStats, statNames) {
     });
   }
 
+  entries.sort((a, b) => statOrderPriority(a.type) - statOrderPriority(b.type));
   return entries;
 }
 
@@ -228,4 +249,14 @@ export const FONT_OPTIONS_BY_LOCALE = {
 
 export function weaponNameFontOptionsForLocale(locale) {
   return FONT_OPTIONS_BY_LOCALE[locale] ?? LATIN_FONT_OPTIONS;
+}
+
+// Stat panel labels + card-back lightcone name font, defaults to Press Start 2P for Latin.
+export function defaultBuildStatFontClass(locale) {
+  return FONT_OPTIONS_BY_LOCALE[locale]?.[0]?.value ?? 'press-start-2p-font';
+}
+
+// Stat panel value font, independent from the label font, defaults to Afacad Bold for Latin.
+export function defaultBuildStatValueFontClass(locale) {
+  return FONT_OPTIONS_BY_LOCALE[locale]?.[0]?.value ?? 'afacad-bold';
 }

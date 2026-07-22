@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import Header from './Header'
 import { Outlet } from 'react-router'
 import Footer from './Footer'
@@ -7,6 +7,15 @@ import { selectBackgroundImageKey, selectBgBlur } from '../../store/settingsSlic
 import { backgroundImages } from '../../assets/backgroundImages'
 import ThemeManager from '../ThemeManager'
 import TranslationWarningBanner from '../TranslationWarningBanner'
+import SilentErrorBoundary from '../SilentErrorBoundary'
+
+// Lazy + isolated: ad blockers (Brave Shields' "block cookie consent
+// notices") specifically target things shaped like this, and a bare static
+// import puts it in the same bundle/failure domain as everything else. If
+// this chunk fails to load or throws, SilentErrorBoundary below swallows it
+// instead of letting it bubble up to the root route's errorElement, which
+// would otherwise replace this ENTIRE layout (Header/Footer included).
+const CookieNotice = lazy(() => import('../CookieNotice'))
 
 const BG_BLUR_VALUES = {
   none: '0px',
@@ -40,6 +49,12 @@ function RootLayout() {
         
         <Footer />
       </div>
+
+      <SilentErrorBoundary>
+        <Suspense fallback={null}>
+          <CookieNotice />
+        </Suspense>
+      </SilentErrorBoundary>
     </div>
   )
 }

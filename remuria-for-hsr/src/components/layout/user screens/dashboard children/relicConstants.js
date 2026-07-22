@@ -8,6 +8,7 @@ import iconIceAddedRatio from "../../../../assets/downloaded_icons/IconIceAddedR
 import iconImaginaryAddedRatio from "../../../../assets/downloaded_icons/IconImaginaryAddedRatio.png"
 import iconJoy from "../../../../assets/downloaded_icons/IconJoy.png"
 import iconMaxHP from "../../../../assets/downloaded_icons/IconMaxHP.png"
+import iconHealRatio from "../../../../assets/downloaded_icons/IconHealRatio.png"
 import iconPhysicalAddedRatio from "../../../../assets/downloaded_icons/IconPhysicalAddedRatio.png"
 import iconQuantumAddedRatio from "../../../../assets/downloaded_icons/IconQuantumAddedRatio.png"
 import iconSpeed from "../../../../assets/downloaded_icons/IconSpeed.png"
@@ -30,7 +31,7 @@ export const STAT_ALIASES = [
   { labels: ['ice'],                                             type: 'IceAddedRatio',              display: 'Ice' },
   { labels: ['imaginary', 'img'],                                type: 'ImaginaryAddedRatio',        display: 'Imaginary' },
   { labels: ['healing', 'heal'],                                 type: 'HealRatioBase',              display: 'Healing' },
-  { labels: ['elation', 'joy'],                                  type: 'Joy',                        display: 'Elation' },
+  { labels: ['elation', 'joy'],                                  type: 'ElationDamageAddedRatio',    display: 'Elation' },
   { labels: ['hp%'],                                             type: 'HPAddedRatio',               display: 'HP%' },
   { labels: ['hp'],                                              type: 'HPDelta',                    display: 'HP' },
   { labels: ['physical', 'phys'],                                type: 'PhysicalAddedRatio',         display: 'Physical' },
@@ -87,7 +88,7 @@ export function statIconGetter(statType) {
   else if (t.includes("fireaddedratio")) return iconFireAddedRatio;
   else if (t.includes("iceaddedratio")) return iconIceAddedRatio;
   else if (t.includes("imaginaryaddedratio")) return iconImaginaryAddedRatio;
-  else if (t.includes("joy")) return iconJoy;
+  else if (t.includes("elationdamageaddedratio")) return iconJoy;
   else if (t.includes("hp")) return iconMaxHP;
   else if (t.includes("physicaladdedratio")) return iconPhysicalAddedRatio;
   else if (t.includes("quantumaddedratio")) return iconQuantumAddedRatio;
@@ -96,7 +97,7 @@ export function statIconGetter(statType) {
   else if (t.includes("statusresistance")) return iconStatusResistance;
   else if (t.includes("thunderaddedratio")) return iconThunderAddedRatio;
   else if (t.includes("windaddedratio")) return iconWindAddedRatio;
-  else if (t.includes("heal")) return iconMaxHP;
+  else if (t.includes("heal")) return iconHealRatio;
   else if (t.includes("sp")) return iconSPRatio;
 }
 

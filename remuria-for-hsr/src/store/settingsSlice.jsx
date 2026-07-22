@@ -16,14 +16,14 @@ function loadFromStorage() {
 
 const defaults = {
     relicAnimations: false,
-    backgroundImageKey: 'backgrounds/unknowable_herta',
-    cardBackgroundImageKey: 'card_backgrounds/albedo',
-    persistSettings: false,
-    themeKey: 'purple',
+    backgroundImageKey: 'backgrounds/miku',
+    cardBackgroundImageKey: 'card_backgrounds/chiori',
+    persistSettings: true,
+    themeKey: 'adaptive',
     pillColorMode: 'card',
     settingsWidth: 'md',
-    relicTwoColumn: false,
-    relicShowCV: false,
+    relicTwoColumn: true,
+    relicShowCV: true,
     relicCVShimmer: true,
     bgBlur: 'medium',
     rankIconShimmer: false,
@@ -31,12 +31,11 @@ const defaults = {
     hideBuildIdentity: false,
     buildCardStarfield: false,
     nameOverflowScrollMode: false,
-    // null = no manual choice yet; BuildDetailCard falls back to the active
-    // locale's own default font (see weaponNameFontOptionsForLocale in
-    // buildConstants.js) whenever this is null OR not a valid option for the
-    // current locale — so switching languages never leaves this pointed at a
-    // font that's not even offered for that language anymore.
-    weaponNameFontClass: null,
+    // Non-Latin locales keep falling back to their own dedicated font, since
+    // these values aren't valid options for them (see weaponNameFontOptionsForLocale).
+    weaponNameFontClass: 'holiday-font',
+    buildStatFontClass: 'libre-baskerville-bold',
+    buildStatValueFontClass: 'afacad-bold',
 };
 
 const saved = loadFromStorage();
@@ -71,10 +70,16 @@ const settingsSlice = createSlice({
         setWeaponNameFontClass: (state, action) => {
             state.weaponNameFontClass = action.payload;
         },
+        setBuildStatFontClass: (state, action) => {
+            state.buildStatFontClass = action.payload;
+        },
+        setBuildStatValueFontClass: (state, action) => {
+            state.buildStatValueFontClass = action.payload;
+        },
     },
 });
 
-export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, setWeaponNameFontClass } = settingsSlice.actions;
+export const { toggleSetting, setBackgroundImage, setCardBackgroundImage, setTheme, setPillColorMode, setSettingsWidth, setBgBlur, setWeaponNameFontClass, setBuildStatFontClass, setBuildStatValueFontClass } = settingsSlice.actions;
 export const selectSettings = (state) => state.settings;
 export const selectRelicAnimations = (state) => state.settings.relicAnimations;
 export const selectBackgroundImageKey = (state) => state.settings.backgroundImageKey;
@@ -95,4 +100,6 @@ export const selectBuildCardStarfield = (state) => state.settings.buildCardStarf
 // size and let the name row scroll instead.
 export const selectNameOverflowScrollMode = (state) => state.settings.nameOverflowScrollMode;
 export const selectWeaponNameFontClass = (state) => state.settings.weaponNameFontClass;
+export const selectBuildStatFontClass = (state) => state.settings.buildStatFontClass;
+export const selectBuildStatValueFontClass = (state) => state.settings.buildStatValueFontClass;
 export default settingsSlice.reducer;
