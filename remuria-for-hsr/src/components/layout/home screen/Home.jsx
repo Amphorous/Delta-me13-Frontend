@@ -6,6 +6,7 @@ import { FaCircleNotch } from "react-icons/fa";
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import 'overlayscrollbars/overlayscrollbars.css';
 import UserStrip from './UserStrip';
+import RandomUserStrip from './RandomUserStrip';
 import { useDispatch, useSelector } from 'react-redux';
 import { addOrReplaceUser } from '../../../store/localUsersSlice';
 import UserCard from './UserCard';
@@ -103,6 +104,19 @@ function Home() {
       })
   }
 
+  function handleRandomUser(){
+    setResponseWait(true);
+    axios.get(`${import.meta.env.VITE_CELESTIA_API_URL}/user/dashboard/random`)
+      .then((res) => {
+        handleUserCardResponse(res);
+      })
+      .catch(() => {
+        setCardState(-1);
+        setCardInfo(undefined);
+        setResponseWait(false);
+      });
+  }
+
   return (
     <div className='flex-1 mx-5 flex justify-around items-center'>
 
@@ -165,8 +179,9 @@ function Home() {
                 <div className=' bg-[#B2B2B2]/40 h-[1px] rounded-4xl w-full'></div> :
                 <div className='w-full py-3'></div>}
               </div>
-              
+
             ))}
+            <RandomUserStrip onClick={handleRandomUser} loading={responseWait} />
           </div>
         </OverlayScrollbarsComponent>
 
