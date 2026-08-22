@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CgSpinner } from 'react-icons/cg';
 import { FaCalculator } from 'react-icons/fa';
@@ -224,6 +224,13 @@ function GenshinPullCalcForm() {
     const [result, setResult] = useState(null);
     const [calcLoading, setCalcLoading] = useState(false);
     const [calcError, setCalcError] = useState(null);
+    const resultRef = useRef(null);
+
+    useEffect(() => {
+        if (result) {
+            resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [result]);
 
     function updateAbyssStar(index, value) {
         setAbyssStars((prev) => prev.map((v, i) => (i === index ? value : v)));
@@ -411,7 +418,11 @@ function GenshinPullCalcForm() {
                 Calculate Pulls
             </button>
 
-            {result && <GenshinResult result={result} />}
+            {result && (
+                <div ref={resultRef}>
+                    <GenshinResult result={result} />
+                </div>
+            )}
         </form>
     );
 }
