@@ -14,6 +14,7 @@ import Validate from './components/layout/user screens/dashboard children/Valida
 import Settings from './components/layout/Settings'
 import NotFound from './components/layout/NotFound'
 import Leaderboards from './components/layout/Leaderboards'
+import PullCalc from './components/layout/PullCalc'
 import DashboardHome from './components/layout/user screens/dashboard children/DashboardHome'
 import ErrorPage from './components/layout/ErrorPage'
 import IsolatedRouteFallback from './components/layout/IsolatedRouteFallback'
@@ -57,6 +58,11 @@ const browserRouterObject = createBrowserRouter([
         path: "leaderboards",
         element: <Leaderboards />,
         handle: { crumb: () => 'Leaderboards' }
+      },
+      {
+        path: "pull-calc",
+        element: <PullCalc />,
+        handle: { crumb: () => 'Pull Calc' }
       },
       {
         // Not "/privacy" — ad-block filter lists (EasyPrivacy etc.) broadly
